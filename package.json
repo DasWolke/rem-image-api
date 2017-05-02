@@ -1,31 +1,27 @@
 {
-  "name": "rem-resource-api",
-  "version": "0.0.1",
+  "name": "rem-image-api",
+  "version": "0.1.0",
+  "description": "A simple image api with pluggable backends",
+  "main": "index.js",
   "dependencies": {
-    "body-parser": "^1.15.2",
-    "cors": "^2.8.1",
-    "express": "^4.14.0",
-    "mongoose": "^4.6.3",
-    "multer": "^1.2.0",
-    "pmx": "^0.6.8",
-    "rand-token": "^0.2.1",
-    "request": "^2.76.0",
-    "shortid": "^2.2.6"
+    "aws-sdk": "^2.48.0",
+    "body-parser": "^1.17.1",
+    "cors": "^2.8.3",
+    "docker-config-loader": "^1.0.0",
+    "express": "^4.15.2",
+    "multer": "^1.3.0",
+    "winston": "^2.3.1"
   },
+  "devDependencies": {},
   "scripts": {
-    "start": "node server.js"
-  },
-  "description": "An api for Rem the bot",
-  "main": "server.js",
-  "devDependencies": {
-    "winston": "^2.2.0"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/DasWolke/rem-resource-api.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Wolke <wolke@ram.moe>",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/DasWolke/rem-resource-api/issues"
   },
