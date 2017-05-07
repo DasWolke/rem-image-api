@@ -2,14 +2,20 @@
   "host": "127.0.0.1",
   "port": 9000,
   "dburl": "mongodb://localhost/image-api",
+  "cdnurl": "",
   "provider": {
     "storage": {
-      "classpath":"./provider/FileStorageProvider.js",
-      "storagepath":"images"
+      "classpath": "./provider/FileStorageProvider.js",
+      "storagepath": "images",
+      "local": {
+        "serveFiles": true,
+        "servePath": "/images"
+      }
     },
     "auth": {
-      "use":false,
-      "classpath":""
+      "use": true,
+      "classpath": "./provider/SimpleAuthProvider.js",
+      "token":"uwu"
     }
   }
 }

@@ -8,7 +8,7 @@ let imageSchema = mongoose.Schema({
     tags: [],
     baseType: String,
     fileType:String,
-    meta: [],
+    mimeType:String,
     nsfw: Boolean,
     account: String
 });

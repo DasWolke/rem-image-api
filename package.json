@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "aws-sdk": "^2.48.0",
+    "axios": "^0.16.1",
     "bluebird": "latest",
     "body-parser": "^1.17.1",
     "cors": "^2.8.3",

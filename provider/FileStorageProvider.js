@@ -62,6 +62,7 @@ class FileStorageProvider extends BaseStorageProvider {
             let type = mime.split('/').slice(1)[0];
             let filepath = path.join(this.options.storagepath, `${name}.${type}`);
             let write = fs.createWriteStream(filepath);
+            let url = "";
             write.once('open', (fd) => {
                 fs.write(fd, file, (err) => {
                     if (err) {

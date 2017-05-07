@@ -5,7 +5,7 @@ const BaseAuthProvider = require('./BaseAuthProvider');
 /**
  * Simple Authentication Provider
  */
-class SimpleAuthProvider extends BaseAuthProvider{
+class SimpleAuthProvider extends BaseAuthProvider {
     /**
      *
      * @param {Object} options Options for the SimpleAuthProvider
@@ -26,7 +26,7 @@ class SimpleAuthProvider extends BaseAuthProvider{
      */
     checkOptions(options) {
         if (!options.token) {
-            throw new Error('No token provided!')
+            throw new Error('No master authorization token provided!')
         }
         return options;
     }
@@ -48,6 +48,15 @@ class SimpleAuthProvider extends BaseAuthProvider{
      */
     needToken() {
         return true;
+    }
+
+    /**
+     * Function that resolves the token to a user via the provided authentication service
+     * @param token
+     * @return {string}
+     */
+    getUser(token) {
+        return 'master';
     }
 }
 module.exports = SimpleAuthProvider;

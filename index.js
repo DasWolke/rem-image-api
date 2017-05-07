@@ -22,6 +22,12 @@ try {
     winston.error('Failed to require config!');
     process.exit(1);
 }
+if (!config.provider) {
+    return winston.error('No providers configured');
+}
+if (!config.provider.storage) {
+    return winston.error('No storage provider configured');
+}
 let mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
 mongoose.connect(config.dburl, (err) => {
@@ -31,6 +37,10 @@ mongoose.connect(config.dburl, (err) => {
     }
 });
 let app = express();
+//serve local files if set in config
+if (config.provider.storage.local && config.provider.storage.local.serveFiles) {
+    app.use(config.provider.storage.local.servePath, express.static(config.provider.storage.storagepath));
+}
 let StorageProvider = require(config.provider.storage.classpath);
 let sp = new StorageProvider(config.provider.storage);
 let AuthProvider = config.provider.auth.use ? require(config.provider.auth.classpath) : undefined;
@@ -42,11 +52,15 @@ app.use((req, res, next) => {
         req.provider.auth = ap;
     } else {
         req.provider.auth = {
-            needToken:() => {
+            needToken: () => {
                 return false;
+            },
+            getUser: () => {
+                return 'anonymous';
             }
         };
     }
+    req.config = config;
     next();
 });
 app.use(bodyParser.json());

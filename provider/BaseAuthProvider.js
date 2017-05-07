@@ -37,5 +37,13 @@ class BaseAuthProvider {
     needToken() {
         throw new Error `checkToken() is not implemented by ${this.constructor.name}`;
     }
+    /**
+     * Function that resolves the token to a user via the provided authentication service
+     * @param token
+     * @return {string}
+     */
+    getUser(token) {
+        throw new Error `getUser() is not implemented by ${this.constructor.name}`;
+    }
 }
 module.exports = BaseAuthProvider;
