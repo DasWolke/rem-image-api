@@ -4,12 +4,8 @@
   "dburl": "mongodb://localhost/image-api",
   "provider": {
     "storage": {
-      "classpath":"./provider/FileStorageProvider.js",
-      "storagepath":"images"
     },
     "auth": {
-      "use":false,
-      "classpath":""
     }
   }
 }
