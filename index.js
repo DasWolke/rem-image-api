@@ -23,6 +23,7 @@ try {
     process.exit(1);
 }
 let mongoose = require('mongoose');
+mongoose.Promise = global.Promise;
 mongoose.connect(config.dburl, (err) => {
     if (err) {
         winston.error("Unable to connect to Mongo Server!");

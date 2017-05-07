@@ -28,12 +28,13 @@ class BaseStorageProvider {
     }
 
     /**
-     * Uploads image to the specified provider, has to be overwritten by the
+     * Uploads file to the specified provider, has to be overwritten by the
      * developer
-     * @param {Blob} image Image to upload
+     * @param {Blob} file File to upload
+     * @param {String} mime Mimetype of the file to upload
      * @return {Promise}
      */
-    async upload(image) {
+    async upload(file, mime) {
         throw new Error `upload() is not implemented by ${this.constructor.name}`;
     }
 }

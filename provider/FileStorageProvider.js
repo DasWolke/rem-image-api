@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const BaseStorageProvider = require('./BaseStorageProvider');
-
+const shortid = require('shortid');
 /**
  * File Storage Provider, a storage provider that is using the local filesystem
  */
@@ -50,14 +50,27 @@ class FileStorageProvider extends BaseStorageProvider {
     }
 
     /**
-     * Uploads image to the specified provider, has to be overwritten by the
+     * Uploads file to the specified provider, has to be overwritten by the
      * developer
-     * @param {Blob} image Image to upload
+     * @param {Blob} file File to upload
+     * @param {String} mime Mimetype of the file
      * @return {Promise}
      */
-    upload(image) {
+    upload(file, mime) {
         return new Promise((res, rej) => {
-
+            let name = shortid();
+            let type = mime.split('/').slice(1)[0];
+            let filepath = path.join(this.options.storagepath, `${name}.${type}`);
+            let write = fs.createWriteStream(filepath);
+            write.once('open', (fd) => {
+                fs.write(fd, file, (err) => {
+                    if (err) {
+                        return rej(err);
+                    }
+                    write.close();
+                    res({name, type, filepath});
+                });
+            });
         });
     }
 }
