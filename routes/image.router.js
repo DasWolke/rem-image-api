@@ -44,7 +44,6 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                 });
             }
         }
-        console.log(req.body);
         //stop the request if no actual file/data is present
         if (!req.body.url && !req.file) {
             return res.status(400).json({status: 400, message: 'You have to either pass a file or a url'});
@@ -148,5 +147,11 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         winston.error(e);
         return res.status(500).json({status: 500, message: 'Internal error'});
     }
+});
+router.get('/random', async (req, res) => {
+
+});
+router.get('/types', async (req, res) => {
+
 });
 module.exports = router;
