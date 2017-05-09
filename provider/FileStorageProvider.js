@@ -2,7 +2,8 @@
  * Created by Julian on 04.05.2017.
  *
  **/
-const fs = require('fs');
+const {promisifyAll} = require('tsubaki');
+const fs = promisifyAll(require('fs'));
 const path = require('path');
 const BaseStorageProvider = require('./BaseStorageProvider');
 const shortid = require('shortid');
@@ -30,23 +31,25 @@ class FileStorageProvider extends BaseStorageProvider {
         if (options.storagepath) {
             options.storagepath = path.resolve(options.storagepath);
         } else {
-            throw new Error('Missing option path');
+            throw new Error('No file storage path configured');
         }
         return options;
     }
 
     /**
      * Checks if a file with this id exists in the storage provided
-     * @param {String} id Unique id of the file
+     * @param {String} filename Filename of the file
      * @return {Promise}
      */
-    getFile(id) {
-        return new Promise((res, rej) => {
-            fs.readdir(this.options.path, (err, stats) => {
-                if (err) return rej(err);
-                console.log(stats);
-            });
+    async getFile(filename) {
+        let stats = await fs.readdirAsync(this.options.storagepath);
+        let FileData = stats.filter(f => {
+            return f === filename;
         });
+        if (!FileData) {
+            throw new Error(`File ${filename} does not exist`);
+        }
+        return FileData;
     }
 
     /**
@@ -62,7 +65,6 @@ class FileStorageProvider extends BaseStorageProvider {
             let type = mime.split('/').slice(1)[0];
             let filepath = path.join(this.options.storagepath, `${name}.${type}`);
             let write = fs.createWriteStream(filepath);
-            let url = "";
             write.once('open', (fd) => {
                 fs.write(fd, file, (err) => {
                     if (err) {
@@ -73,6 +75,20 @@ class FileStorageProvider extends BaseStorageProvider {
                 });
             });
         });
+    }
+
+    /**
+     * Removes a file at the given path
+     * @param {Object} file File object
+     * @param {String} file.id Id of the file
+     * @param {String} file.fileType Filetype of the file
+     * @return {Promise}
+     */
+    async removeFile(file) {
+        await this.getFile(`${file.id}.${file.fileType}`);
+        let filepath = path.join(this.options.storagepath, `${file.id}.${file.fileType}`);
+        await fs.unlinkAsync(filepath);
+        return file;
     }
 }
 module.exports = FileStorageProvider;

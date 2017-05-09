@@ -2,19 +2,24 @@
   "host": "127.0.0.1",
   "port": 9000,
   "dburl": "mongodb://localhost/image-api",
-  "cdnurl": "",
   "provider": {
     "storage": {
-      "classpath": "./provider/FileStorageProvider.js",
+      "classpath": "./provider/AwsS3StorageProvider.js",
       "storagepath": "images",
       "local": {
-        "serveFiles": false,
+        "serveFiles": true,
         "servePath": "/images"
-      }
+      },
+      "awsS3Bucket": "wolke-dev",
+      "awsAccessKeyId": "aws access key",
+      "awsSecretAccessKey": "aws secret key",
+      "awsRegion": "aws region",
+      "cdnurl": "url from were the images are served from"
     },
     "auth": {
-      "use": false,
-      "classpath": ""
+      "use": true,
+      "classpath": "./provider/SimpleAuthProvider.js",
+      "token": "token to use"
     }
   }
 }

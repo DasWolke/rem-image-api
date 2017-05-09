@@ -20,10 +20,10 @@ class BaseStorageProvider {
 
     /**
      * Checks if a file with this id exists in the storage provided
-     * @param {String} id Unique id of the file
+     * @param {String} filename Filename of the file
      * @return {Promise}
      */
-    async getFile(id) {
+    async getFile(filename) {
         throw new Error `getFile() is not implemented by ${this.constructor.name}`;
     }
 
@@ -36,6 +36,17 @@ class BaseStorageProvider {
      */
     async upload(file, mime) {
         throw new Error `upload() is not implemented by ${this.constructor.name}`;
+    }
+
+    /**
+     * Removes a file at the given path
+     * @param {Object} file File object
+     * @param {String} file.id Id of the file
+     * @param {String} file.fileType Filetype of the file
+     * @return {Promise}
+     */
+    async removeFile(file) {
+        throw new Error `removeFile() is not implemented by ${this.constructor.name}`;
     }
 }
 module.exports = BaseStorageProvider;

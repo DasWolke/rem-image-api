@@ -1,7 +1,6 @@
 /**
  * Created by Julian on 02.05.2017.
  */
-global.Promise = require('bluebird');
 const express = require('express');
 const bodyParser = require('body-parser');
 const loader = require('docker-config-loader');
