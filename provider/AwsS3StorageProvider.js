@@ -17,8 +17,8 @@ class AwsS3StorageProvider extends BaseStorageProvider {
         this.checkOptions(options);
         this.options = options;
         AWS.config = new AWS.Config({
-            accessKeyId: options.aws_access_key,
-            secretAccessKey: options.aws_secret_key,
+            accessKeyId: options.awsAccessKeyId,
+            secretAccessKey: options.awsSecretAccessKey,
             region: options.awsRegion
         });
         this.s3 = new AWS.S3();
