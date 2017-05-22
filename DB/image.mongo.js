@@ -7,9 +7,9 @@ let imageSchema = mongoose.Schema({
     source: String,
     tags: [],
     baseType: String,
-    fileType:String,
-    mimeType:String,
-    nsfw: Boolean,
+    fileType: String,
+    mimeType: String,
+    nsfw: {type: Boolean, default: false},
     account: String
 });
 let imageModel = mongoose.model('Image', imageSchema);
