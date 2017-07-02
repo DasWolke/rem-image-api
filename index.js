@@ -28,7 +28,7 @@ if (!config.provider.storage) {
     return winston.error('No storage provider configured');
 }
 let mongoose = require('mongoose');
-mongoose.Promise = global.Promise;
+mongoose.Promise = Promise;
 mongoose.connect(config.dburl, (err) => {
     if (err) {
         winston.error("Unable to connect to Mongo Server!");

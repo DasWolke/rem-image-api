@@ -34,7 +34,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             if (!req.headers.authorization) {
                 return res.status(401).json({
                     status: 401,
-                    message: `This route requires authentization via a authorization header with a token`
+                    message: `This route requires authentication via a authorization header with a token`
                 });
             }
             let auth = await req.provider.auth.checkToken(req.headers.authorization, '/upload', 'post');
@@ -119,7 +119,11 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             //when nsfw is not true it will get set to false automatically :D
             nsfw = req.body.nsfw === 'true';
         }
-        let account = await req.provider.auth.getUser();
+        let account = 'master';
+        if (req.provider.auth.needToken()) {
+            let user = await req.provider.auth.getUser(req.headers.authorization);
+            account = user.id;
+        }
         let image = new ImageModel({
             id: uploadedFile.name,
             source: req.body.source ? req.body.source : undefined,
@@ -164,6 +168,7 @@ router.get('/random', async (req, res) => {
         //if there are tags split them and add them
         if (req.query.tags) {
             let tags = req.query.tags.split(',');
+            query.map(t => t.trim());
             query.tags = {$in: tags};
         }
         //switch through the nsfw types
