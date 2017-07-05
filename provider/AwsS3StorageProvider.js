@@ -77,7 +77,7 @@ class AwsS3StorageProvider extends BaseStorageProvider {
             let type = mime.split('/').slice(1)[0];
             this.s3.putObject({
                 Bucket: this.options.awsS3Bucket,
-                Key: `${name}.${type}`,
+                Key: `${this.options.storagepath !== '' ? (this.options.storagepath.endsWith('/') ? this.options.storagepath : this.options.storagepath + '/') : ''}${name}.${type}`,
                 Body: file,
                 ContentType: mime
             }, (err, data) => {
@@ -87,7 +87,7 @@ class AwsS3StorageProvider extends BaseStorageProvider {
                 return res({
                     name,
                     type,
-                    filepath: `http://${this.options.awsS3Bucket}.s3.amazonaws.com/${name}.${type}`
+                    filepath: `${this.options.cdnurl.endsWith('/') ? this.options.cdnurl : this.options.cdnurl + '/'}${this.options.storagepath !== '' ? (this.options.storagepath.endsWith('/') ? this.options.storagepath : this.options.storagepath + '/') : ''}${name}.${type}`
                 });
             });
         });

@@ -19,7 +19,7 @@ const axios = require('axios');
 function buildImagePath(req, config, image) {
     let imagePath;
     if (config.cdnurl) {
-        imagePath = `${config.cdnurl}${config.cdnurl.endsWith('/') ? '' : '/'}${image.id}.${image.fileType}`;
+        imagePath = `${config.cdnurl}${config.cdnurl.endsWith('/') ? '' : '/'}${config.storagepath !== '' ? (config.storagepath.endsWith('/') ? config.storagepath : config.storagepath + '/') : ''}${image.id}.${image.fileType}`;
         return imagePath;
     }
     let fullUrl = req.protocol + '://' + req.get('host');
@@ -100,6 +100,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                 let request = await axios.get(url.href, {responseType: 'arraybuffer'});
                 uploadedFile = await req.provider.storage.upload(request.data, request.headers['content-type']);
             } catch (e) {
+                console.error(e);
                 return res.status(400).json({
                     status: 400,
                     message: `The url ${req.body.url} is not supported.`
