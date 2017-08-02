@@ -1,11 +1,13 @@
-/**
- * Created by Julian on 07.05.2017.
- */
+'use strict';
 
 /**
  * Basic Authentication Provider
  */
 class BaseAuthProvider {
+    static getId() {
+        throw new Error `getId() is not implemented by ${this.constructor.name}`;
+    }
+
     constructor() {
 
     }
@@ -37,6 +39,7 @@ class BaseAuthProvider {
     needToken() {
         throw new Error `checkToken() is not implemented by ${this.constructor.name}`;
     }
+
     /**
      * Function that resolves the token to a user via the provided authentication service
      * @param token
@@ -46,4 +49,5 @@ class BaseAuthProvider {
         throw new Error `getUser() is not implemented by ${this.constructor.name}`;
     }
 }
+
 module.exports = BaseAuthProvider;

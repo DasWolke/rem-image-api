@@ -1,6 +1,5 @@
-/**
- * Created by Julian on 04.05.2017.
- */
+'use strict';
+
 let mongoose = require('mongoose');
 let imageSchema = mongoose.Schema({
     id: String,
@@ -10,7 +9,8 @@ let imageSchema = mongoose.Schema({
     fileType: String,
     mimeType: String,
     nsfw: {type: Boolean, default: false},
-    account: String
+    account: String,
+    hidden: {type: Boolean, default: false},
 });
-let imageModel = mongoose.model('Image', imageSchema);
+let imageModel = mongoose.model('Images', imageSchema);
 module.exports = imageModel;

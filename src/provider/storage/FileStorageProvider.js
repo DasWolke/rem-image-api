@@ -1,7 +1,6 @@
-/**
- * Created by Julian on 04.05.2017.
- *
- **/
+/* eslint-disable valid-jsdoc */
+'use strict';
+
 const {promisifyAll} = require('tsubaki');
 const fs = promisifyAll(require('fs'));
 const path = require('path');
@@ -11,6 +10,10 @@ const shortid = require('shortid');
  * File Storage Provider, a storage provider that is using the local filesystem
  */
 class FileStorageProvider extends BaseStorageProvider {
+    static getId() {
+        return 'file_storage';
+    }
+
     /**
      * @param {Object} options Options for the provider
      * @param {String} options.storagepath Directory where the files should be saved/loaded
@@ -43,9 +46,7 @@ class FileStorageProvider extends BaseStorageProvider {
      */
     async getFile(filename) {
         let stats = await fs.readdirAsync(this.options.storagepath);
-        let FileData = stats.filter(f => {
-            return f === filename;
-        });
+        let FileData = stats.filter(f => f === filename);
         if (!FileData) {
             throw new Error(`File ${filename} does not exist`);
         }
@@ -65,6 +66,7 @@ class FileStorageProvider extends BaseStorageProvider {
             let type = mime.split('/').slice(1)[0];
             let filepath = path.join(this.options.storagepath, `${name}.${type}`);
             let write = fs.createWriteStream(filepath);
+            write.once('error', (e) => rej(e));
             write.once('open', (fd) => {
                 fs.write(fd, file, (err) => {
                     if (err) {

@@ -1,12 +1,12 @@
+'use strict';
+
 /**
- * Created by Julian on 04.05.2017.
- *
  * Base Storage Provider, a storage provider implementation should extend this
  * class
  */
 class BaseStorageProvider {
-    constructor() {
-
+    static getId() {
+        throw new Error `getId() is not implemented by ${this.constructor.name}`;
     }
 
     /**

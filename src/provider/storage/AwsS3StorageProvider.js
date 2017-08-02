@@ -1,9 +1,8 @@
-/**
- * Created by Julian on 06.05.2017.
- **/
+'use strict';
+
 const BaseStorageProvider = require('./BaseStorageProvider');
 let AWS = require('aws-sdk');
-let shortid = require("shortid");
+let shortid = require('shortid');
 
 /**
  * Aws S3 Storage Provider, a storage provider using a aws s3 bucket
@@ -19,11 +18,16 @@ class AwsS3StorageProvider extends BaseStorageProvider {
         AWS.config = new AWS.Config({
             accessKeyId: options.awsAccessKeyId,
             secretAccessKey: options.awsSecretAccessKey,
-            region: options.awsRegion
+            region: options.awsRegion,
         });
         this.s3 = new AWS.S3();
     }
 
+    static getId() {
+        return 'aws_s3_storage';
+    }
+
+    // eslint-disable-next-line valid-jsdoc
     /**
      * Function that checks if all needed option keys are set,
      * throws error otherwise
@@ -47,6 +51,7 @@ class AwsS3StorageProvider extends BaseStorageProvider {
         }
     }
 
+    // eslint-disable-next-line valid-jsdoc
     /**
      * Checks if a file with this id exists in the bucket provided
      * @param {String} filename Filename of the file
@@ -56,14 +61,15 @@ class AwsS3StorageProvider extends BaseStorageProvider {
         return new Promise((res, rej) => {
             this.s3.getObject({
                 Bucket: this.options.awsS3Bucket,
-                Key: filename
-            }, (err, data) => {
+                Key: `${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}${filename}`,
+            }, (err) => {
                 if (err) return rej(err);
                 return res();
             });
         });
     }
 
+    // eslint-disable-next-line valid-jsdoc
     /**
      * Uploads file to the specified provider, has to be overwritten by the
      * developer
@@ -74,25 +80,27 @@ class AwsS3StorageProvider extends BaseStorageProvider {
     upload(file, mime) {
         return new Promise((res, rej) => {
             let name = shortid();
-            let type = mime.split('/').slice(1)[0];
+            let type = mime.split('/')
+                .slice(1)[0];
             this.s3.putObject({
                 Bucket: this.options.awsS3Bucket,
-                Key: `${this.options.storagepath !== '' ? (this.options.storagepath.endsWith('/') ? this.options.storagepath : this.options.storagepath + '/') : ''}${name}.${type}`,
+                Key: `${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}${name}.${type}`,
                 Body: file,
-                ContentType: mime
-            }, (err, data) => {
+                ContentType: mime,
+            }, (err) => {
                 if (err) {
                     return rej(err);
                 }
                 return res({
                     name,
                     type,
-                    filepath: `${this.options.cdnurl.endsWith('/') ? this.options.cdnurl : this.options.cdnurl + '/'}${this.options.storagepath !== '' ? (this.options.storagepath.endsWith('/') ? this.options.storagepath : this.options.storagepath + '/') : ''}${name}.${type}`
+                    filepath: `${this.options.cdnurl.endsWith('/') ? this.options.cdnurl : `${this.options.cdnurl}/`}${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}${name}.${type}`,
                 });
             });
         });
     }
 
+    // eslint-disable-next-line valid-jsdoc
     /**
      * Removes a file at the given path
      * @param {Object} file File object
@@ -102,19 +110,21 @@ class AwsS3StorageProvider extends BaseStorageProvider {
      */
     removeFile(file) {
         return new Promise((res, rej) => {
-            this.getFile(`${file.id}.${file.fileType}`).then(() => {
-                this.s3.deleteObject({
-                    Bucket: this.options.awsS3Bucket,
-                    Key: `${file.id}.${file.fileType}`
-                }, (err, data) => {
-                    if (err) {
-                        return rej(err);
-                    }
-                    return res(file);
-                });
-            }).catch(res);
+            this.getFile(`${file.id}.${file.fileType}`)
+                .then(() => {
+                    this.s3.deleteObject({
+                        Bucket: this.options.awsS3Bucket,
+                        Key: `${file.id}.${file.fileType}`,
+                    }, (err) => {
+                        if (err) {
+                            return rej(err);
+                        }
+                        return res(file);
+                    });
+                })
+                .catch(res);
         });
-
     }
 }
+
 module.exports = AwsS3StorageProvider;
