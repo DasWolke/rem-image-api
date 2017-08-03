@@ -49,7 +49,7 @@ class SimpleAuthProvider extends BaseMiddleware {
         if (!req.headers || !req.headers.authorization) return HTTPCodes.UNAUTHORIZED;
         let authHeader = req.headers.authorization;
         if (authHeader !== this.options.token) return HTTPCodes.UNAUTHORIZED;
-        req.account = {name: 'admin', id: 'admin', scopes: ['admin']};
+        req.account = {id: 'admin', scopes: ['admin']};
         return HTTPCodes.OK;
     }
 }

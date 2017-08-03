@@ -84,7 +84,7 @@ let init = async() => {
     if (!authProvider) {
         winston.warn('No auth provider was set, all routes are unlocked!');
         app.use((req, res, next) => {
-            req.account = {name: 'admin', id: 'admin', scopes: ['admin']};
+            req.account = {id: 'admin', scopes: ['admin']};
             return next();
         });
     }

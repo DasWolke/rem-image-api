@@ -18,7 +18,7 @@ class ImageRouter extends BaseRouter {
         this.router()
             .post('/upload', upload.single('file'), async(req, res) => {
                 try {
-                    if (!req.account.perms.all && !req.account.perms.upload_image && !req.account.perms.upload_image_private) {
+                    if (req.account && !req.account.perms.all && !req.account.perms.upload_image && !req.account.perms.upload_image_private) {
                         return res.status(HTTPCodes.FORBIDDEN)
                             .json({
                                 status: HTTPCodes.FORBIDDEN,
@@ -28,7 +28,7 @@ class ImageRouter extends BaseRouter {
                     // if a user tried to upload a non private image and does not have the needed scope
                     if (!req.body.hidden &&
                         req.body.hidden !== 'true') {
-                        if (!req.account.perms.upload_image) {
+                        if (req.account && !req.account.perms.upload_image) {
                             return res.status(HTTPCodes.FORBIDDEN)
                                 .json({
                                     status: HTTPCodes.FORBIDDEN,
@@ -142,7 +142,7 @@ class ImageRouter extends BaseRouter {
             });
         this.get('/types', async(req) => {
             try {
-                if (!req.account.perms.all && !req.account.perms.image_data) {
+                if (req.account && !req.account.perms.all && !req.account.perms.image_data) {
                     return {
                         status: HTTPCodes.FORBIDDEN,
                         message: `missing scope ${pkg.name}-${req.config.env}:image_data`,
@@ -174,7 +174,7 @@ class ImageRouter extends BaseRouter {
 
         this.get('/tags', async(req) => {
             try {
-                if (!req.account.perms.all && !req.account.perms.image_data) {
+                if (req.account && !req.account.perms.all && !req.account.perms.image_data) {
                     return {
                         status: HTTPCodes.FORBIDDEN,
                         message: `missing scope ${pkg.name}-${req.config.env}:image_data`,
@@ -206,7 +206,7 @@ class ImageRouter extends BaseRouter {
 
         this.get('/random', async(req) => {
             try {
-                if (!req.account.perms.all && !req.account.perms.image_data) {
+                if (req.account && !req.account.perms.all && !req.account.perms.image_data) {
                     return {
                         status: HTTPCodes.FORBIDDEN,
                         message: `missing scope ${pkg.name}-${req.config.env}:image_data`,
@@ -307,7 +307,7 @@ class ImageRouter extends BaseRouter {
         this.get('/info', async() => ({status: 400, message: 'Missing parameters, you need to add an id'}));
         this.get('/info/:id', async(req) => {
             try {
-                if (!req.account.perms.all && !req.account.perms.image_data) {
+                if (req.account && !req.account.perms.all && !req.account.perms.image_data) {
                     return {
                         status: HTTPCodes.FORBIDDEN,
                         message: `missing scope ${pkg.name}-${req.config.env}:image_data`,
@@ -343,7 +343,7 @@ class ImageRouter extends BaseRouter {
         });
         this.delete('/info/:id', async(req, res) => {
             try {
-                if (!req.account.perms.all && !req.account.perms.image_delete && !req.account.perms.image_delete_private) {
+                if (req.account && !req.account.perms.all && !req.account.perms.image_delete && !req.account.perms.image_delete_private) {
                     return {
                         status: HTTPCodes.FORBIDDEN,
                         message: `missing scope(s) ${pkg.name}-${req.config.env}:image_delete or ${pkg.name}-${req.config.env}:image_delete_private`,
@@ -433,7 +433,7 @@ class ImageRouter extends BaseRouter {
         });
         this.get('/list/:id', async(req) => {
             try {
-                if (!req.account.perms.all && !req.account.perms.image_list_all && !req.account.perms.image_list) {
+                if (req.account && !req.account.perms.all && !req.account.perms.image_list_all && !req.account.perms.image_list) {
                     return {
                         status: HTTPCodes.FORBIDDEN,
                         message: `missing scope(s) ${pkg.name}-${req.config.env}:image_list or ${pkg.name}-${req.config.env}:image_list_all`,
@@ -445,7 +445,50 @@ class ImageRouter extends BaseRouter {
                         message: `missing scope ${pkg.name}-${req.config.env}:image_list_all`,
                     };
                 }
-                return {message: 'This endpoint is not coded yet, lul'};
+                let page = 0;
+                let query = {account: req.params.id};
+                if (req.query.page) {
+                    try {
+                        req.query.page = parseInt(req.query.page);
+                    } catch (e) {
+                        winston.warn(e);
+                    }
+                    if (!isNaN(req.query.page)) {
+                        page = req.query.page - 1;
+                    }
+                }
+                if (req.query.nsfw) {
+                    switch (req.query.nsfw) {
+                        case 'false':
+                            query.nsfw = false;
+                            break;
+                        case 'true':
+                            break;
+                        case 'only':
+                            query.nsfw = true;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                if (req.query.hidden) {
+                    switch (req.query.hidden) {
+                        case 'false':
+                            query.hidden = false;
+                            break;
+                        case 'true':
+                            query.hidden = true;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                let totalImages = await ImageModel.count({account: req.params.id});
+                let images = await ImageModel.find(query)
+                    .skip(page * 50)
+                    .limit(50)
+                    .exec();
+                return {images, total: totalImages, page: page + 1};
             } catch (e) {
                 winston.error(e);
                 return {status: 500, message: 'Internal error'};
