@@ -394,6 +394,9 @@ class ImageRouter extends BaseRouter {
                         page = req.query.page - 1;
                     }
                 }
+                if (page < 0) {
+                    page = 0;
+                }
                 if (req.query.nsfw) {
                     switch (req.query.nsfw) {
                         case 'false':
@@ -422,9 +425,14 @@ class ImageRouter extends BaseRouter {
                 }
                 let totalImages = await ImageModel.count();
                 let images = await ImageModel.find(query)
-                    .skip(page * 50)
-                    .limit(50)
+                    .skip(page * 25)
+                    .limit(25)
+                    .lean()
                     .exec();
+                images = images.map(img => {
+                    img.url = this.buildImagePath(req, req.config.provider.storage, img);
+                    return img;
+                });
                 return {images, total: totalImages, page: page + 1};
             } catch (e) {
                 winston.error(e);
@@ -457,6 +465,9 @@ class ImageRouter extends BaseRouter {
                         page = req.query.page - 1;
                     }
                 }
+                if (page < 0) {
+                    page = 0;
+                }
                 if (req.query.nsfw) {
                     switch (req.query.nsfw) {
                         case 'false':
@@ -485,9 +496,14 @@ class ImageRouter extends BaseRouter {
                 }
                 let totalImages = await ImageModel.count({account: req.params.id});
                 let images = await ImageModel.find(query)
-                    .skip(page * 50)
-                    .limit(50)
+                    .skip(page * 25)
+                    .limit(25)
+                    .lean()
                     .exec();
+                images = images.map(img => {
+                    img.url = this.buildImagePath(req, req.config.provider.storage, img);
+                    return img;
+                });
                 return {images, total: totalImages, page: page + 1};
             } catch (e) {
                 winston.error(e);
