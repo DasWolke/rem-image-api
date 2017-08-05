@@ -114,7 +114,7 @@ class AwsS3StorageProvider extends BaseStorageProvider {
                 .then(() => {
                     this.s3.deleteObject({
                         Bucket: this.options.awsS3Bucket,
-                        Key: `${file.id}.${file.fileType}`,
+                        Key: `${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}${file.id}.${file.fileType}`,
                     }, (err) => {
                         if (err) {
                             return rej(err);
