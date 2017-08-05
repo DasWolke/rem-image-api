@@ -366,7 +366,7 @@ class ImageRouter extends BaseRouter {
                         };
                     }
                 }
-                await req.provider.storage.removeFile(image);
+                await req.storageProvider.removeFile(image);
                 await ImageModel.remove({id: image.id});
                 return {status: 200, message: `Image successfully removed`, image: image};
             } catch (e) {
