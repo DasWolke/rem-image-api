@@ -251,6 +251,8 @@ class ImageRouter extends BaseRouter {
                             query.nsfw = false;
                             break;
                     }
+                } else {
+                    query.nsfw = false;
                 }
                 if (req.query.hidden) {
                     switch (req.query.hidden) {
