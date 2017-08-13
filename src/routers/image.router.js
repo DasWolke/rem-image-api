@@ -404,10 +404,8 @@ class ImageRouter extends BaseRouter {
                     }
                     tags.push(tagContent.toLocaleLowerCase());
                 }
-                image.tags = image.tags.filter((t) =>
-                    tags.indexOf(t.name.toLocaleLowerCase()) <= -1,
-                    // only return tags that should not be removed;
-                );
+                // only return tags that should not be removed;
+                image.tags = image.tags.filter((t) => tags.indexOf(t.name.toLocaleLowerCase()) <= -1);
                 await image.save();
                 return {status: 200, image};
             } catch (e) {
