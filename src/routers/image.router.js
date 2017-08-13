@@ -264,8 +264,11 @@ class ImageRouter extends BaseRouter {
                             query.account = req.account.id;
                             break;
                         default:
+                            query.$or = [{hidden: false}, {hidden: true, account: req.account.id}];
                             break;
                     }
+                } else {
+                    query.$or = [{hidden: false}, {hidden: true, account: req.account.id}];
                 }
                 let images = await ImageModel.find(query)
                     .distinct('id');
@@ -278,12 +281,7 @@ class ImageRouter extends BaseRouter {
                     return {status: 404, message: 'No image found for your query'};
                 }
                 if (image.tags && image.tags.length > 0) {
-                    image.tags = image.tags.filter(t => {
-                        if (t.hidden && t.user === req.account.id) {
-                            return true;
-                        }
-                        return !t.hidden;
-                    });
+                    image.tags = this.filterHiddenTags(image, req.account);
                 }
                 // build the full url to the image
                 let imagePath = this.buildImagePath(req, req.config.provider.storage, image);
@@ -322,6 +320,9 @@ class ImageRouter extends BaseRouter {
                 if (image.hidden && image.account !== req.account.id) {
                     return {status: HTTPCodes.FORBIDDEN, message: 'This image is private'};
                 }
+                if (image.tags && image.tags.length > 0) {
+                    image.tags = this.filterHiddenTags(image, req.account);
+                }
                 let imagePath = this.buildImagePath(req, req.config.provider.storage, image);
                 await req.storageProvider.getFile(`${image.id}.${image.fileType}`);
                 // return the image
@@ -343,7 +344,78 @@ class ImageRouter extends BaseRouter {
                 return {status: 500, message: 'Internal error'};
             }
         });
-        this.delete('/info/:id', async(req, res) => {
+        this.post('/info/:id/tags', async(req) => {
+            try {
+                if (req.account && !req.account.perms.all && !req.account.perms.image_tags) {
+                    return {
+                        status: HTTPCodes.FORBIDDEN,
+                        message: `missing scope ${pkg.name}-${req.config.env}:image_tags`,
+                    };
+                }
+                let image = await ImageModel.findOne({id: req.params.id});
+                if (!image) {
+                    return {status: 404, message: 'No image found for your query'};
+                }
+                if (!req.body.tags) {
+                    return {status: 400, message: 'No tags were supplied'};
+                }
+                if (image.hidden && image.account !== req.account.id) {
+                    return {status: HTTPCodes.FORBIDDEN, message: 'This image is private'};
+                }
+                let tags;
+                try {
+                    tags = this.filterTags(req.body.tags, image.tags, req.account.id);
+                } catch (e) {
+                    return {status: 400, message: e.message};
+                }
+                if (tags.addedTags.length === 0) {
+                    return {status: 400, message: 'Tags existed already or had no content'};
+                }
+                for (let tag of tags.addedTags) {
+                    image.tags.push(tag);
+                }
+                await image.save();
+                return {status: 200, image, tags};
+            } catch (e) {
+                winston.error(e);
+                return {status: 500, message: 'Internal error'};
+            }
+        });
+        this.delete('/info/:id/tags', async(req) => {
+            try {
+                if (req.account && !req.account.perms.all && !req.account.perms.image_tags_delete) {
+                    return {
+                        status: HTTPCodes.FORBIDDEN,
+                        message: `missing scope ${pkg.name}-${req.config.env}:image_tags_delete`,
+                    };
+                }
+                if (!req.body.tags) {
+                    return {status: 400, message: 'No tags were supplied'};
+                }
+                let image = await ImageModel.findOne({id: req.params.id});
+                if (image.hidden && image.account !== req.account.id) {
+                    return {status: HTTPCodes.FORBIDDEN, message: 'This image is private'};
+                }
+                let tags = [];
+                for (let tag of req.body.tags) {
+                    let tagContent = this.getTagContent(tag);
+                    if (!tagContent) {
+                        continue;
+                    }
+                    tags.push(tagContent.toLocaleLowerCase());
+                }
+                image.tags = image.tags.filter((t) =>
+                    tags.indexOf(t.name.toLocaleLowerCase()) <= -1,
+                    // only return tags that should not be removed;
+                );
+                await image.save();
+                return {status: 200, image};
+            } catch (e) {
+                winston.error(e);
+                return {status: 500, message: 'Internal error'};
+            }
+        });
+        this.delete('/info/:id', async(req) => {
             try {
                 if (req.account && !req.account.perms.all && !req.account.perms.image_delete && !req.account.perms.image_delete_private) {
                     return {
@@ -352,13 +424,11 @@ class ImageRouter extends BaseRouter {
                     };
                 }
                 if (!req.params.id) {
-                    return res.status(400)
-                        .json({status: 400, message: 'Missing parameters, you need to add an id'});
+                    return {status: 400, message: 'Missing parameters, you need to add an id'};
                 }
                 let image = await ImageModel.findOne({id: req.params.id});
                 if (!image) {
-                    return res.status(404)
-                        .json({status: 404, message: 'No image found for your query'});
+                    return {status: 404, message: 'No image found for your query'};
                 }
                 if (!image.hidden || (image.hidden && image.account !== req.account.id)) {
                     if (!req.account.perms.all && !req.account.perms.image_delete) {
@@ -546,6 +616,65 @@ class ImageRouter extends BaseRouter {
             imagePath = `${fullUrl}${config.local.servePath}${config.local.servePath.endsWith('/') ? '' : '/'}${image.id}.${image.fileType}`;
         }
         return imagePath;
+    }
+
+    filterTags(submittedTags, imageTags, accountId) {
+        let addedTags = [];
+        let skippedTags = [];
+        for (let tag of submittedTags) {
+            let tagContent = this.getTagContent(tag);
+            if (!tagContent) {
+                skippedTags.push('Tag without content');
+            }
+            if (this.checkTagExist(tag, imageTags)) {
+                skippedTags.push(tag);
+                continue;
+            }
+            let sanitizedTag = {user: accountId};
+            if (typeof tag === 'string') {
+                sanitizedTag = {hidden: false, user: accountId, name: tagContent};
+            }
+            if (!tag.name && typeof tag !== 'string') {
+                throw new Error('Expected tags to contain array of strings or array of tag objects');
+            }
+            sanitizedTag.name = tagContent;
+            if (!tag.hidden) {
+                sanitizedTag.hidden = false;
+            }
+            addedTags.push(sanitizedTag);
+        }
+        return {addedTags, skippedTags};
+    }
+
+    checkTagExist(tag, imageTags) {
+        let tagContent = this.getTagContent(tag);
+        for (let imageTag of imageTags) {
+            if (imageTag.name.toLocaleLowerCase() === tagContent.toLocaleLowerCase()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    getTagContent(tag) {
+        if (typeof tag !== 'string') {
+            if (!tag.name) {
+                return null;
+            } else {
+                return tag.name.trim();
+            }
+        } else {
+            return tag.trim();
+        }
+    }
+
+    filterHiddenTags(image, account) {
+        return image.tags.filter(t => {
+            if (t.hidden && t.user === account.id) {
+                return true;
+            }
+            return !t.hidden;
+        });
     }
 }
 
