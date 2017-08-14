@@ -28,7 +28,7 @@ class ImageRouter extends BaseRouter {
                     // if a user tried to upload a non private image and does not have the needed scope
                     if (!req.body.hidden &&
                         req.body.hidden !== 'true') {
-                        if (req.account && !req.account.perms.upload_image) {
+                        if (req.account && !req.account.perms.all && !req.account.perms.upload_image) {
                             return res.status(HTTPCodes.FORBIDDEN)
                                 .json({
                                     status: HTTPCodes.FORBIDDEN,
