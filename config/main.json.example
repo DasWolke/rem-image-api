@@ -1,0 +1,43 @@
+{
+  "host": "127.0.0.1",
+  "port": 9000,
+  "dburl": "mongodb://localhost/image-api",
+  "env": "development",
+  "provider": {
+    "auth": {
+      "use": true,
+      "id": "simple_auth",
+      "token": "memes",
+      "whitelist": [
+        {
+          "path": "/"
+        },
+        {
+          "path": "/info*",
+          "method": "get"
+        },
+        {
+          "path": "/random",
+          "method": "get"
+        },
+        {
+          "path": "/tags",
+          "method": "get"
+        },
+        {
+          "path": "/types",
+          "method": "get"
+        },
+        {
+          "path": "/images*",
+          "method": "get"
+        }
+      ]
+    },
+    "storage": {
+      "id": "local",
+      "path": "/images",
+      "cdn_url": "https://my-memes-are-the-best.com"
+    }
+  }
+}

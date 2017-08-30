@@ -1,8 +1,6 @@
-# Created by .ignore support plugin (hsz.mobi)
 .idea/
-out
-gen
+.vscode/
 node_modules/
-cmd.bat
-images/
-routes/server/
+config/main.json
+package-lock.json
+dev-images/
