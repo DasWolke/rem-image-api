@@ -41,7 +41,7 @@ class ImageRouter extends BaseRouter {
                         return res.status(400)
                             .json({status: 400, message: 'You have to either pass a file or a url'});
                     }
-                    req.body.baseType = req.body.baseType ? req.body.baseType : req.body.basetype ? req.body.basetype : '';
+                    req.body.baseType = req.body.baseType ? req.body.baseType : req.body.basetype;
                     if (!req.body.baseType) {
                         return res.status(400)
                             .json({status: 400, message: 'You have to pass the basetype of the file'});
@@ -123,7 +123,8 @@ class ImageRouter extends BaseRouter {
                         .json({
                             status: HTTPCodes.OK,
                             file: {
-                                id: image.id, fileType: image.fileType,
+                                id: image.id,
+                                fileType: image.fileType,
                                 source: image.source,
                                 baseType: image.baseType,
                                 tags: image.tags,
@@ -644,6 +645,12 @@ class ImageRouter extends BaseRouter {
         return {addedTags, skippedTags};
     }
 
+    /**
+     * Utility method that checks if a tag already exists within an image
+     * @param {string|Object} tag - User submitted tag, may either be an object or a method
+     * @param {Array} imageTags - Array of tag objects
+     * @returns {boolean} returns true if the tag exists and false if not
+     */
     checkTagExist(tag, imageTags) {
         let tagContent = this.getTagContent(tag);
         for (let imageTag of imageTags) {
@@ -654,6 +661,11 @@ class ImageRouter extends BaseRouter {
         return false;
     }
 
+    /**
+     * Utility method that returns the content of a tag with whitespace removed
+     * @param {Object|string} tag - User submitted tag, may either be an object or a method
+     * @returns {string|null} content of the tag or null if the tag had no content
+     */
     getTagContent(tag) {
         if (typeof tag !== 'string') {
             if (!tag.name) {
@@ -666,6 +678,12 @@ class ImageRouter extends BaseRouter {
         }
     }
 
+    /**
+     * Filters out tags to only show the tags a user may see
+     * @param {Object} image - The Image that should be filtered
+     * @param {Object} account - The account that made the request
+     * @returns {Object} - Image with filtered tags
+     */
     filterHiddenTags(image, account) {
         return image.tags.filter(t => {
             if (t.hidden && t.user === account.id) {
