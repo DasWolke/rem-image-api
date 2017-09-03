@@ -463,10 +463,15 @@ class ImageRouter extends BaseRouter {
                     }
                     if (!isNaN(req.query.page)) {
                         page = req.query.page - 1;
+                    } else {
+                        page = 0;
                     }
                 }
                 if (page < 0) {
                     page = 0;
+                }
+                if (req.query.type) {
+                    query.baseType = req.query.type;
                 }
                 if (req.query.nsfw) {
                     switch (req.query.nsfw) {
@@ -494,7 +499,7 @@ class ImageRouter extends BaseRouter {
                             break;
                     }
                 }
-                let totalImages = await ImageModel.count();
+                let totalImages = await ImageModel.count(query);
                 let images = await ImageModel.find(query)
                     .skip(page * 25)
                     .limit(25)
@@ -534,10 +539,15 @@ class ImageRouter extends BaseRouter {
                     }
                     if (!isNaN(req.query.page)) {
                         page = req.query.page - 1;
+                    } else {
+                        page = 0;
                     }
                 }
                 if (page < 0) {
                     page = 0;
+                }
+                if (req.query.type) {
+                    query.baseType = req.query.type;
                 }
                 if (req.query.nsfw) {
                     switch (req.query.nsfw) {
@@ -565,7 +575,7 @@ class ImageRouter extends BaseRouter {
                             break;
                     }
                 }
-                let totalImages = await ImageModel.count({account: req.params.id});
+                let totalImages = await ImageModel.count(query);
                 let images = await ImageModel.find(query)
                     .skip(page * 25)
                     .limit(25)
