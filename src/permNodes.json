@@ -1,0 +1,54 @@
+[
+  {
+    "name": "upload_image",
+    "description": "Allow a user to upload a image that may be public",
+    "routes": [
+      "/upload"
+    ]
+  },
+  {
+    "name": "upload_image_private",
+    "description": "Allows a user to upload private images",
+    "routes": [
+      "/upload"
+    ]
+  },
+  {
+    "name": "image_data",
+    "description": "Allows a user to request basic image data",
+    "routes": [
+      "/random",
+      "/types",
+      "/tags",
+      "/info/:image_id"
+    ]
+  },
+  {
+    "name": "image_delete",
+    "description": "Allows a user to delete an image",
+    "routes": [
+      "/info/:image_id"
+    ]
+  },
+  {
+    "name": "image_delete_private",
+    "description": "Allows a user to delete images that are his own",
+    "routes": [
+      "/info/:image_id"
+    ]
+  },
+  {
+    "name": "image_tags",
+    "description": "Allows a user to add tags to images, that are either his own or public",
+    "routes": [
+      "/info/:image_id/tags"
+    ]
+  },
+  {
+    "name": "image_tags_delete",
+    "description": "Allows a user to remove tags from images, that are either his own Images or public ones",
+    "routes": [
+      "/info/:image_id/tags"
+    ]
+  }
+]

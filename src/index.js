@@ -17,6 +17,9 @@ const AuthMiddleware = require('wapi-core').AccountAPIMiddleware;
 const {promisifyAll} = require('tsubaki');
 const fs = promisifyAll(require('fs'));
 const path = require('path');
+
+const permNodes = require('./permNodes');
+
 winston.remove(winston.transports.Console);
 winston.add(winston.transports.Console, {
     timestamp: true,
@@ -116,7 +119,10 @@ let init = async() => {
     app.use(new PermMiddleware(pkg.name, config.env).middleware());
 
     // Routers
-    app.use(new GenericRouter(pkg.version, `Welcome to ${pkg.name}, the weeb image api`).router());
+    app.use(new GenericRouter(pkg.version,
+        `Welcome to ${pkg.name}, the weeb image api`,
+        `${pkg.name}-${config.env}`,
+        permNodes).router());
     app.use(new ImageRouter().router());
     // Always use this last
     app.use(new WildcardRouter().router());
