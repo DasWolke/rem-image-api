@@ -271,6 +271,22 @@ class ImageRouter extends BaseRouter {
                 } else {
                     query.$or = [{hidden: false}, {hidden: true, account: req.account.id}];
                 }
+                if (req.query.filetype) {
+                    switch (req.query.filetype) {
+                        case 'jpg':
+                        case 'jpeg':
+                            query.fileType = {$in: ['jpeg', 'jpg']};
+                            break;
+                        case 'png':
+                            query.fileType = 'png';
+                            break;
+                        case 'gif':
+                            query.fileType = 'gif';
+                            break;
+                        default:
+                            break;
+                    }
+                }
                 let images = await ImageModel.find(query)
                     .distinct('id');
                 if (images.length === 0) {
@@ -499,6 +515,22 @@ class ImageRouter extends BaseRouter {
                             break;
                     }
                 }
+                if (req.query.filetype) {
+                    switch (req.query.filetype) {
+                        case 'jpg':
+                        case 'jpeg':
+                            query.fileType = {$in: ['jpeg', 'jpg']};
+                            break;
+                        case 'png':
+                            query.fileType = 'png';
+                            break;
+                        case 'gif':
+                            query.fileType = 'gif';
+                            break;
+                        default:
+                            break;
+                    }
+                }
                 let totalImages = await ImageModel.count(query);
                 let images = await ImageModel.find(query)
                     .skip(page * 25)
@@ -570,6 +602,22 @@ class ImageRouter extends BaseRouter {
                             break;
                         case 'true':
                             query.hidden = true;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                if (req.query.filetype) {
+                    switch (req.query.filetype) {
+                        case 'jpg':
+                        case 'jpeg':
+                            query.fileType = {$in: ['jpeg', 'jpg']};
+                            break;
+                        case 'png':
+                            query.fileType = 'png';
+                            break;
+                        case 'gif':
+                            query.fileType = 'gif';
                             break;
                         default:
                             break;
