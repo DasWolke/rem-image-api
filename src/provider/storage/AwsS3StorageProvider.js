@@ -3,7 +3,7 @@
 const BaseStorageProvider = require('./BaseStorageProvider');
 let AWS = require('aws-sdk');
 let shortid = require('shortid');
-
+let axios = require('axios');
 /**
  * Aws S3 Storage Provider, a storage provider using a aws s3 bucket
  */
@@ -54,19 +54,11 @@ class AwsS3StorageProvider extends BaseStorageProvider {
     // eslint-disable-next-line valid-jsdoc
     /**
      * Checks if a file with this id exists in the bucket provided
-     * @param {String} filename Filename of the file
-     * @return {Promise}
+     * @param {string} url Full Url of the file
+     * @returns {Promise}
      */
-    getFile(filename) {
-        return new Promise((res, rej) => {
-            this.s3.getObject({
-                Bucket: this.options.awsS3Bucket,
-                Key: `${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}${filename}`,
-            }, (err) => {
-                if (err) return rej(err);
-                return res();
-            });
-        });
+    getFile(url) {
+        return axios.head(url);
     }
 
     // eslint-disable-next-line valid-jsdoc

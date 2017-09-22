@@ -16,7 +16,7 @@ class ImageRouter extends BaseRouter {
     constructor() {
         super();
         this.router()
-            .post('/upload', upload.single('file'), async(req, res) => {
+            .post('/upload', upload.single('file'), async (req, res) => {
                 try {
                     if (req.account && !req.account.perms.all && !req.account.perms.upload_image && !req.account.perms.upload_image_private) {
                         return res.status(HTTPCodes.FORBIDDEN)
@@ -141,7 +141,7 @@ class ImageRouter extends BaseRouter {
                         .json({status: HTTPCodes.INTERNAL_SERVER_ERROR, message: 'Internal error'});
                 }
             });
-        this.get('/types', async(req) => {
+        this.get('/types', async (req) => {
             try {
                 if (req.account && !req.account.perms.all && !req.account.perms.image_data) {
                     return {
@@ -173,7 +173,7 @@ class ImageRouter extends BaseRouter {
             }
         });
 
-        this.get('/tags', async(req) => {
+        this.get('/tags', async (req) => {
             try {
                 if (req.account && !req.account.perms.all && !req.account.perms.image_data) {
                     return {
@@ -205,7 +205,7 @@ class ImageRouter extends BaseRouter {
             }
         });
 
-        this.get('/random', async(req) => {
+        this.get('/random', async (req) => {
             try {
                 if (req.account && !req.account.perms.all && !req.account.perms.image_data) {
                     return {
@@ -321,8 +321,8 @@ class ImageRouter extends BaseRouter {
                 return {status: 500, message: 'Internal error'};
             }
         });
-        this.get('/info', async() => ({status: 400, message: 'Missing parameters, you need to add an id'}));
-        this.get('/info/:id', async(req) => {
+        this.get('/info', async () => ({status: 400, message: 'Missing parameters, you need to add an id'}));
+        this.get('/info/:id', async (req) => {
             try {
                 if (req.account && !req.account.perms.all && !req.account.perms.image_data) {
                     return {
@@ -341,7 +341,12 @@ class ImageRouter extends BaseRouter {
                     image.tags = this.filterHiddenTags(image, req.account);
                 }
                 let imagePath = this.buildImagePath(req, req.config.provider.storage, image);
-                await req.storageProvider.getFile(`${image.id}.${image.fileType}`);
+                try {
+                    await req.storageProvider.getFile(imagePath, `${image.id}.${image.fileType}`);
+                } catch (e) {
+                    return {status: 404, message: 'Image exists in Database but not in Filestorage'};
+                }
+
                 // return the image
                 return {
                     status: 200,
@@ -361,7 +366,7 @@ class ImageRouter extends BaseRouter {
                 return {status: 500, message: 'Internal error'};
             }
         });
-        this.post('/info/:id/tags', async(req) => {
+        this.post('/info/:id/tags', async (req) => {
             try {
                 if (req.account && !req.account.perms.all && !req.account.perms.image_tags) {
                     return {
@@ -398,7 +403,7 @@ class ImageRouter extends BaseRouter {
                 return {status: 500, message: 'Internal error'};
             }
         });
-        this.delete('/info/:id/tags', async(req) => {
+        this.delete('/info/:id/tags', async (req) => {
             try {
                 if (req.account && !req.account.perms.all && !req.account.perms.image_tags_delete) {
                     return {
@@ -430,7 +435,7 @@ class ImageRouter extends BaseRouter {
                 return {status: 500, message: 'Internal error'};
             }
         });
-        this.delete('/info/:id', async(req) => {
+        this.delete('/info/:id', async (req) => {
             try {
                 if (req.account && !req.account.perms.all && !req.account.perms.image_delete && !req.account.perms.image_delete_private) {
                     return {
@@ -461,7 +466,7 @@ class ImageRouter extends BaseRouter {
                 return {status: 500, message: 'Internal error'};
             }
         });
-        this.get('/list/', async(req) => {
+        this.get('/list/', async (req) => {
             try {
                 if (!req.account.perms.all && !req.account.perms.image_list_all) {
                     return {
@@ -547,7 +552,7 @@ class ImageRouter extends BaseRouter {
                 return {status: 500, message: 'Internal error'};
             }
         });
-        this.get('/list/:id', async(req) => {
+        this.get('/list/:id', async (req) => {
             try {
                 if (req.account && !req.account.perms.all && !req.account.perms.image_list_all && !req.account.perms.image_list) {
                     return {
