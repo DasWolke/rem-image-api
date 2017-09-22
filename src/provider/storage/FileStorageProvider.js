@@ -41,10 +41,11 @@ class FileStorageProvider extends BaseStorageProvider {
 
     /**
      * Checks if a file with this id exists in the storage provided
-     * @param {String} filename Filename of the file
+     * @param {string} url Url of the file
+     * @param {string} filename Filename of the file
      * @return {Promise}
      */
-    async getFile(filename) {
+    async getFile(url, filename) {
         let stats = await fs.readdirAsync(this.options.storagepath);
         let FileData = stats.filter(f => f === filename);
         if (!FileData) {
