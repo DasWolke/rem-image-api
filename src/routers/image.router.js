@@ -165,6 +165,24 @@ class ImageRouter extends BaseRouter {
                 } else {
                     query = {$or: [{hidden: false}, {account: req.account.id, hidden: true}]};
                 }
+                // switch through the nsfw types
+                if (req.query.nsfw) {
+                    switch (req.query.nsfw) {
+                        case 'false':
+                            query.nsfw = false;
+                            break;
+                        case 'true':
+                            break;
+                        case 'only':
+                            query.nsfw = true;
+                            break;
+                        default:
+                            query.nsfw = false;
+                            break;
+                    }
+                } else {
+                    query.nsfw = false;
+                }
                 let types = await ImageModel.distinct('baseType', query);
                 return {status: 200, types: types};
             } catch (e) {
@@ -196,6 +214,24 @@ class ImageRouter extends BaseRouter {
                     }
                 } else {
                     query = {$or: [{'tags.hidden': false}, {'tags.user': req.account.id, 'tags.hidden': true}]};
+                }
+                // switch through the nsfw types
+                if (req.query.nsfw) {
+                    switch (req.query.nsfw) {
+                        case 'false':
+                            query.nsfw = false;
+                            break;
+                        case 'true':
+                            break;
+                        case 'only':
+                            query.nsfw = true;
+                            break;
+                        default:
+                            query.nsfw = false;
+                            break;
+                    }
+                } else {
+                    query.nsfw = false;
                 }
                 let tags = await ImageModel.distinct('tags.name', query);
                 return {status: HTTPCodes.OK, tags};
