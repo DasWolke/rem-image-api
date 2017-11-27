@@ -184,7 +184,24 @@ class ImageRouter extends BaseRouter {
                     query.nsfw = false;
                 }
                 let types = await ImageModel.distinct('baseType', query);
-                return {status: 200, types: types};
+                let preview = [];
+                if (req.query.preview) {
+                    for (let type of types) {
+                        query.baseType = type;
+                        let image = await ImageModel.findOne(query, {id: 1, baseType: 1, fileType: 1}).lean();
+                        if (image) {
+                            image.url = this.buildImagePath(req, req.config.provider.storage, image);
+                            preview.push({
+                                url: image.url,
+                                id: image.id,
+                                fileType: image.fileType,
+                                baseType: type,
+                                type
+                            });
+                        }
+                    }
+                }
+                return {status: 200, types: types, preview};
             } catch (e) {
                 winston.error(e);
                 return {status: HTTPCodes.INTERNAL_SERVER_ERROR, message: 'Internal error'};
