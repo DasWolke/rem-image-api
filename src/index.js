@@ -13,6 +13,7 @@ const ImageRouter = require('./routers/image.router');
 
 const PermMiddleware = require('wapi-core').PermMiddleware;
 const AuthMiddleware = require('wapi-core').AccountAPIMiddleware;
+const TrackMiddleware = require('./middleware/track.middleware');
 
 const {promisifyAll} = require('tsubaki');
 const fs = promisifyAll(require('fs'));
@@ -26,7 +27,7 @@ winston.add(winston.transports.Console, {
     colorize: true,
 });
 
-let init = async() => {
+let init = async () => {
     let config, pkg;
     try {
         config = require('../config/main.json');
@@ -117,6 +118,9 @@ let init = async() => {
     });
 
     app.use(new PermMiddleware(pkg.name, config.env).middleware());
+    if (config.track) {
+        app.use(new TrackMiddleware().middleware());
+    }
 
     // Routers
     app.use(new GenericRouter(pkg.version,

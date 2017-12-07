@@ -3,6 +3,7 @@
   "port": 9000,
   "dburl": "mongodb://localhost/image-api",
   "env": "development",
+  "track":"",
   "provider": {
     "auth": {
       "use": true,
