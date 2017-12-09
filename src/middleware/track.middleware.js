@@ -5,6 +5,10 @@ class Track extends Middleware {
     async exec(req) {
         let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
         let fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+        let uid;
+        if (req.account) {
+            uid = req.account.id;
+        }
         if (req.headers['CF-Connecting-IP']) {
             ip = req.headers['CF-Connecting-IP'];
         }
@@ -14,7 +18,7 @@ class Track extends Middleware {
         }
         let visitor = ua(req.config.track, {https: true});
         visitor.pageview({
-            uid: req.account.id,
+            uid,
             uip: ip,
             ua: req.headers['user-agent'],
             dl: fullUrl
