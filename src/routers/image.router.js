@@ -128,7 +128,7 @@ class ImageRouter extends BaseRouter {
                                 source: image.source,
                                 baseType: image.baseType,
                                 tags: image.tags,
-                                path: imagePath,
+                                url: imagePath,
                                 hidden,
                                 nsfw,
                                 account: req.account.id,
@@ -157,7 +157,7 @@ class ImageRouter extends BaseRouter {
                             break;
                         case 'true':
                             query.hidden = true;
-                            query.user = req.account.id;
+                            query.account = req.account.id;
                             break;
                         default:
                             break;
@@ -188,7 +188,9 @@ class ImageRouter extends BaseRouter {
                 if (req.query.preview) {
                     for (let type of types) {
                         query.baseType = type;
-                        let image = await ImageModel.findOne(query, {id: 1, baseType: 1, fileType: 1}).lean();
+                        let image = await ImageModel.findOne(query, {id: 1, baseType: 1, fileType: 1})
+                            .lean()
+                            .exec();
                         if (image) {
                             image.url = this.buildImagePath(req, req.config.provider.storage, image);
                             preview.push({
@@ -346,7 +348,9 @@ class ImageRouter extends BaseRouter {
                     return {status: 404, message: 'No image found for your query'};
                 }
                 let id = images[Math.floor(Math.random() * images.length)];
-                let image = await ImageModel.findOne({id});
+                let image = await ImageModel.findOne({id})
+                    .lean()
+                    .exec();
                 if (!image) {
                     return {status: 404, message: 'No image found for your query'};
                 }
@@ -701,6 +705,7 @@ class ImageRouter extends BaseRouter {
 
     checkImageType(type) {
         switch (type) {
+            case 'image/jpg':
             case 'image/jpeg':
                 break;
             case 'image/png':
