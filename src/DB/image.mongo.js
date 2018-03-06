@@ -4,7 +4,7 @@ const mongoose = require('mongoose')
 const imageSchema = mongoose.Schema({
   id: String,
   source: String,
-  tags: [],
+  tags: [String],
   baseType: String,
   fileType: String,
   mimeType: String,
