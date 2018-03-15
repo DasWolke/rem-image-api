@@ -1,16 +1,19 @@
 /**
  * Created by Julian on 02.05.2017.
  */
-const Url = require('url')
+
 const multer = require('multer')
 const storage = multer.memoryStorage()
 const upload = multer({storage: storage})
-const winston = require('winston')
+const logger = require('@weeb_services/wapi-core').Logger
 const ImageModel = require('../DB/image.mongo')
-const axios = require('axios')
-const BaseRouter = require('wapi-core').BaseRouter
-const HTTPCodes = require('wapi-core').Constants.HTTPCodes
+const BaseRouter = require('@weeb_services/wapi-core').BaseRouter
+const HTTPCodes = require('@weeb_services/wapi-core').Constants.HTTPCodes
 const pkg = require('../../package.json')
+const ImageController = require('../controllers/image.controller')
+const utils = require('../utils/utils')
+const HttpError = require('@weeb_services/wapi-core').Errors.HttpError
+const {checkPermissions, buildMissingScopeMessage} = require('@weeb_services/wapi-core').Utils
 
 class ImageRouter extends BaseRouter {
   constructor () {
@@ -18,21 +21,20 @@ class ImageRouter extends BaseRouter {
     this.router()
       .post('/upload', upload.single('file'), async (req, res) => {
         try {
-          if (req.account && !req.account.perms.all && !req.account.perms.upload_image && !req.account.perms.upload_image_private) {
+          if (!checkPermissions(req.account, ['upload_image', 'upload_image_private'])) {
             return res.status(HTTPCodes.FORBIDDEN)
               .json({
                 status: HTTPCodes.FORBIDDEN,
-                message: `missing scope(s) ${pkg.name}-${req.config.env}:upload_image or ${pkg.name}-${req.config.env}:upload_image_private`
+                message: buildMissingScopeMessage(pkg.name, req.config.env, ['upload_image', 'upload_image_private'])
               })
           }
           // if a user tried to upload a non private image and does not have the needed scope
-          if (!req.body.hidden &&
-                        req.body.hidden !== 'true') {
-            if (req.account && !req.account.perms.all && !req.account.perms.upload_image) {
+          if (!utils.isTrue(req.body.hidden)) {
+            if (!checkPermissions(req.account, ['upload_image'])) {
               return res.status(HTTPCodes.FORBIDDEN)
                 .json({
                   status: HTTPCodes.FORBIDDEN,
-                  message: `missing scope ${pkg.name}-${req.config.env}:upload_image`
+                  message: buildMissingScopeMessage(pkg.name, req.config.env, ['upload_image'])
                 })
             }
           }
@@ -41,55 +43,13 @@ class ImageRouter extends BaseRouter {
             return res.status(400)
               .json({status: 400, message: 'You have to either pass a file or a url'})
           }
-          req.body.baseType = req.body.baseType ? req.body.baseType : req.body.basetype
           if (!req.body.baseType) {
             return res.status(400)
               .json({status: 400, message: 'You have to pass the basetype of the file'})
           }
-          let uploadedFile
-          if (req.file) {
-            // only allow certain image files
-            try {
-              this.checkImageType(req.file.mimetype)
-            } catch (e) {
-              return res.status(400)
-                .json({
-                  status: 400,
-                  message: `The mimetype ${req.file.mimetype} is not supported`
-                })
-            }
-            // upload the file
-            uploadedFile = await req.storageProvider.upload(req.file.buffer, req.file.mimetype)
-          } else if (req.body.url) {
-            try {
-              // make a head request to the provided url
-              const url = Url.parse(req.body.url)
-              const head = await axios.head(url.href)
-              // check the file
-              try {
-                this.checkImageType(head.headers['content-type'])
-              } catch (e) {
-                return res.status(400)
-                  .json({
-                    status: 400,
-                    message: `The mimetype ${head.headers['content-type']} is not supported`
-                  })
-              }
-              const request = await axios.get(url.href, {responseType: 'arraybuffer'})
-              uploadedFile = await req.storageProvider.upload(request.data, request.headers['content-type'])
-            } catch (e) {
-              winston.error(e)
-              return res.status(400)
-                .json({
-                  status: 400,
-                  message: `The url ${req.body.url} is not supported.`
-                })
-            }
-          }
-          let hidden = false
-          if (req.body.hidden) {
-            hidden = req.body.hidden === 'true'
-          }
+          const uploadedFile = await ImageController.uploadImage(req)
+          const hidden = utils.isTrue(req.body.hidden)
+          const nsfw = utils.isTrue(req.body.nsfw)
           let tags = []
           if (req.body.tags) {
             tags = req.body.tags.split(',')
@@ -97,12 +57,6 @@ class ImageRouter extends BaseRouter {
                 t = t.trim()
                 return {name: t, hidden, user: req.account.id}
               })
-          }
-          let nsfw = false
-          if (req.body.nsfw) {
-            // support booleans for nsfw
-            // when nsfw is not true it will get set to false automatically :D
-            nsfw = req.body.nsfw === 'true'
           }
           const image = new ImageModel({
             id: uploadedFile.name,
@@ -136,7 +90,11 @@ class ImageRouter extends BaseRouter {
               message: 'Upload succeeded'
             })
         } catch (e) {
-          winston.error(e)
+          if (e instanceof HttpError) {
+            return res.status(e.status)
+              .json({status: e.status, message: e.message})
+          }
+          logger.error(e)
           return res.status(HTTPCodes.INTERNAL_SERVER_ERROR)
             .json({status: HTTPCodes.INTERNAL_SERVER_ERROR, message: 'Internal error'})
         }
@@ -205,7 +163,7 @@ class ImageRouter extends BaseRouter {
         }
         return {status: 200, types: types, preview}
       } catch (e) {
-        winston.error(e)
+        logger.error(e)
         return {status: HTTPCodes.INTERNAL_SERVER_ERROR, message: 'Internal error'}
       }
     })
@@ -255,7 +213,7 @@ class ImageRouter extends BaseRouter {
         const tags = await ImageModel.distinct('tags.name', query)
         return {status: HTTPCodes.OK, tags}
       } catch (e) {
-        winston.error(e)
+        logger.error(e)
         return {status: HTTPCodes.INTERNAL_SERVER_ERROR, message: 'Internal error'}
       }
     })
@@ -374,7 +332,7 @@ class ImageRouter extends BaseRouter {
           url: imagePath
         }
       } catch (e) {
-        winston.error(e)
+        logger.error(e)
         return {status: 500, message: 'Internal error'}
       }
     })
@@ -419,7 +377,7 @@ class ImageRouter extends BaseRouter {
           account: image.account
         }
       } catch (e) {
-        winston.error(e)
+        logger.error(e)
         return {status: 500, message: 'Internal error'}
       }
     })
@@ -456,7 +414,7 @@ class ImageRouter extends BaseRouter {
         await image.save()
         return {status: 200, image, tags}
       } catch (e) {
-        winston.error(e)
+        logger.error(e)
         return {status: 500, message: 'Internal error'}
       }
     })
@@ -488,7 +446,7 @@ class ImageRouter extends BaseRouter {
         await image.save()
         return {status: 200, image}
       } catch (e) {
-        winston.error(e)
+        logger.error(e)
         return {status: 500, message: 'Internal error'}
       }
     })
@@ -519,7 +477,7 @@ class ImageRouter extends BaseRouter {
         await ImageModel.remove({id: image.id})
         return {status: 200, message: `Image successfully removed`, image: image}
       } catch (e) {
-        winston.error(e)
+        logger.error(e)
         return {status: 500, message: 'Internal error'}
       }
     })
@@ -537,7 +495,7 @@ class ImageRouter extends BaseRouter {
           try {
             req.query.page = parseInt(req.query.page)
           } catch (e) {
-            winston.warn(e)
+            logger.warn(e)
           }
           if (!isNaN(req.query.page)) {
             page = req.query.page - 1
@@ -605,7 +563,7 @@ class ImageRouter extends BaseRouter {
         })
         return {images, total: totalImages, page: page + 1}
       } catch (e) {
-        winston.error(e)
+        logger.error(e)
         return {status: 500, message: 'Internal error'}
       }
     })
@@ -629,7 +587,7 @@ class ImageRouter extends BaseRouter {
           try {
             req.query.page = parseInt(req.query.page)
           } catch (e) {
-            winston.warn(e)
+            logger.warn(e)
           }
           if (!isNaN(req.query.page)) {
             page = req.query.page - 1
@@ -697,34 +655,20 @@ class ImageRouter extends BaseRouter {
         })
         return {images, total: totalImages, page: page + 1}
       } catch (e) {
-        winston.error(e)
+        logger.error(e)
         return {status: 500, message: 'Internal error'}
       }
     })
   }
 
-  checkImageType (type) {
-    switch (type) {
-      case 'image/jpg':
-      case 'image/jpeg':
-        break
-      case 'image/png':
-        break
-      case 'image/gif':
-        break
-      default:
-        throw new Error(`Filetype ${type} is not supported`)
-    }
-  }
-
   // eslint-disable-next-line valid-jsdoc
   /**
-     * Builds the actual path from the file
-     * @param {Object} req the actual request
-     * @param {Object} config the loaded config
-     * @param {Object} image Image object
-     * @return {string} imagePath Path to the image
-     */
+   * Builds the actual path from the file
+   * @param {Object} req the actual request
+   * @param {Object} config the loaded config
+   * @param {Object} image Image object
+   * @return {string} imagePath Path to the image
+   */
   buildImagePath (req, config, image) {
     let imagePath
     if (config.cdnurl && (!config.local || !config.local.serveFiles)) {
@@ -767,11 +711,11 @@ class ImageRouter extends BaseRouter {
   }
 
   /**
-     * Utility method that checks if a tag already exists within an image
-     * @param {string|Object} tag - User submitted tag, may either be an object or a method
-     * @param {Array} imageTags - Array of tag objects
-     * @returns {boolean} returns true if the tag exists and false if not
-     */
+   * Utility method that checks if a tag already exists within an image
+   * @param {string|Object} tag - User submitted tag, may either be an object or a method
+   * @param {Array} imageTags - Array of tag objects
+   * @returns {boolean} returns true if the tag exists and false if not
+   */
   checkTagExist (tag, imageTags) {
     const tagContent = this.getTagContent(tag)
     for (const imageTag of imageTags) {
@@ -783,10 +727,10 @@ class ImageRouter extends BaseRouter {
   }
 
   /**
-     * Utility method that returns the content of a tag with whitespace removed
-     * @param {Object|string} tag - User submitted tag, may either be an object or a method
-     * @returns {string|null} content of the tag or null if the tag had no content
-     */
+   * Utility method that returns the content of a tag with whitespace removed
+   * @param {Object|string} tag - User submitted tag, may either be an object or a method
+   * @returns {string|null} content of the tag or null if the tag had no content
+   */
   getTagContent (tag) {
     if (typeof tag !== 'string') {
       if (!tag.name) {
@@ -800,11 +744,11 @@ class ImageRouter extends BaseRouter {
   }
 
   /**
-     * Filters out tags to only show the tags a user may see
-     * @param {Object} image - The Image that should be filtered
-     * @param {Object} account - The account that made the request
-     * @returns {Object} - Image with filtered tags
-     */
+   * Filters out tags to only show the tags a user may see
+   * @param {Object} image - The Image that should be filtered
+   * @param {Object} account - The account that made the request
+   * @returns {Object} - Image with filtered tags
+   */
   filterHiddenTags (image, account) {
     return image.tags.filter(t => {
       if (t.hidden && t.user === account.id) {

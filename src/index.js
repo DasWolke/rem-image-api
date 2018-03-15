@@ -2,55 +2,44 @@
 
 const express = require('express')
 const bodyParser = require('body-parser')
-const winston = require('winston')
 const cors = require('cors')
 const mongoose = require('mongoose')
 mongoose.Promise = Promise
 
-const GenericRouter = require('wapi-core').GenericRouter
-const WildcardRouter = require('wapi-core').WildcardRouter
+const GenericRouter = require('@weeb_services/wapi-core').GenericRouter
+const WildcardRouter = require('@weeb_services/wapi-core').WildcardRouter
 const ImageRouter = require('./routers/image.router')
 
-const PermMiddleware = require('wapi-core').PermMiddleware
-const AuthMiddleware = require('wapi-core').AccountAPIMiddleware
+const PermMiddleware = require('@weeb_services/wapi-core').PermMiddleware
+const AuthMiddleware = require('@weeb_services/wapi-core').AccountAPIMiddleware
 const TrackMiddleware = require('@weeb_services/wapi-core').TrackingMiddleware
 
-const {promisifyAll} = require('tsubaki')
-const fs = promisifyAll(require('fs'))
-const path = require('path')
-
 const permNodes = require('./permNodes')
+const loader = require('./utils/loaders')
+const logger = require('@weeb_services/wapi-core').Logger
 
-winston.remove(winston.transports.Console)
-winston.add(winston.transports.Console, {
-  timestamp: true,
-  colorize: true
-})
+const Registrator = require('@weeb_services/wapi-core').Registrator
+const ShutdownHandler = require('@weeb_services/wapi-core').ShutdownHandler
 
+const pkg = require('../package.json')
+const config = require('../config/main')
+let registrator
+if (config.registration && config.registration.enabled) {
+  registrator = new Registrator(config.host, config.token)
+}
+let shutdownManager
 const init = async () => {
-  let config, pkg
-  try {
-    config = require('../config/main.json')
-    pkg = require('../package.json')
-  } catch (e) {
-    winston.error(e)
-    winston.error('Failed to require config.')
-    return process.exit(1)
-  }
-  winston.info('Config loaded.')
-
   if (!config.provider.storage) {
-    winston.error('No Storage Provider configured')
+    logger.error('No Storage Provider configured')
     process.exit(1)
   }
-
   try {
-    await mongoose.connect(config.dburl, {useMongoClient: true})
+    await mongoose.connect(config.dburl)
   } catch (e) {
-    winston.error('Unable to connect to Mongo Server.')
+    logger.error('Unable to connect to Mongo Server.')
     return process.exit(1)
   }
-  winston.info('MongoDB connected.')
+  logger.info('MongoDB connected.')
 
   // Initialize express
   const app = express()
@@ -71,22 +60,22 @@ const init = async () => {
   if (config.provider.auth && config.provider.auth.use) {
     if (config.provider.auth.id !== 'account_api') {
       try {
-        authProvider = await loadAuthProvider(config)
+        authProvider = await loader.loadAuthProvider(config)
       } catch (e) {
-        winston.error(e)
-        winston.error('Unable to load a suitable auth provider')
+        logger.error(e)
+        logger.error('Unable to load a suitable auth provider')
         return process.exit(1)
       }
     } else {
       // Account API Auth middleware
       authProvider = new AuthMiddleware(config.provider.auth.urlBase, config.provider.auth.uagent, config.provider.auth.whitelist)
     }
-    winston.info(`Loaded class ${authProvider.constructor.name} as auth provider`)
+    logger.info(`Loaded class ${authProvider.constructor.name} as auth provider`)
     app.use(authProvider.middleware())
   }
   // if there is no auth provider attach a pseudo middleware
   if (!authProvider) {
-    winston.warn('No auth provider was set, all routes are unlocked!')
+    logger.warn('No auth provider was set, all routes are unlocked!')
     app.use((req, res, next) => {
       req.account = {id: 'admin', scopes: ['admin']}
       return next()
@@ -95,14 +84,14 @@ const init = async () => {
   // load a storage provider, used for storing and loading dev-images
   let storageProvider
   try {
-    storageProvider = await loadStorageProvider(config)
+    storageProvider = await loader.loadStorageProvider(config)
   } catch (e) {
-    winston.error(e)
-    winston.error('Unable to load a suitable storage provider')
+    logger.error(e)
+    logger.error('Unable to load a suitable storage provider')
     return process.exit(1)
   }
   if (!storageProvider) {
-    winston.error('No storage provider was loaded')
+    logger.error('No storage provider was loaded')
     return process.exit(1)
   }
 
@@ -111,7 +100,7 @@ const init = async () => {
     app.use(config.provider.storage.local.servePath, express.static(config.provider.storage.storagepath))
   }
 
-  winston.info(`Loaded class ${storageProvider.constructor.name} as storage provider`)
+  logger.info(`Loaded class ${storageProvider.constructor.name} as storage provider`)
   app.use((req, res, next) => {
     req.storageProvider = storageProvider
     return next()
@@ -131,52 +120,20 @@ const init = async () => {
   // Always use this last
   app.use(new WildcardRouter().router())
 
-  app.listen(config.port, config.host)
-  winston.info(`Server started on ${config.host}:${config.port}`)
+  const server = app.listen(config.port, config.host)
+
+  shutdownManager = new ShutdownHandler(server, registrator, mongoose, pkg.name)
+  if (registrator) {
+    await registrator.register(pkg.name, [config.env], config.port)
+  }
+  logger.info(`Server started on ${config.host}:${config.port}`)
 }
 init()
   .catch(e => {
-    winston.error(e)
-    winston.error('Failed to initialize.')
+    logger.error(e)
+    logger.error('Failed to initialize.')
     process.exit(1)
   })
 
-async function loadAuthProvider (config) {
-  const dir = await fs.readdirAsync(path.join(__dirname, '/provider/auth'))
-  let authProvider
-  if (dir.length > 0) {
-    const classes = []
-    for (let i = 0; i < dir.length; i++) {
-      if (!dir[i].toLowerCase()
-          .startsWith('base')) {
-        classes.push(require(path.join(__dirname, '/provider/auth', dir[i])))
-      }
-    }
-    for (let i = 0; i < classes.length; i++) {
-      if (classes[i].getId() === config.provider.auth.id) {
-        authProvider = new classes[i](config.provider.auth)
-      }
-    }
-  }
-  return authProvider
-}
-
-async function loadStorageProvider (config) {
-  const dir = await fs.readdirAsync(path.join(__dirname, '/provider/storage'))
-  let storageProvider
-  if (dir.length > 0) {
-    const classes = []
-    for (let i = 0; i < dir.length; i++) {
-      if (!dir[i].toLowerCase()
-          .startsWith('base')) {
-        classes.push(require(path.join(__dirname, '/provider/storage', dir[i])))
-      }
-    }
-    for (let i = 0; i < classes.length; i++) {
-      if (classes[i].getId() === config.provider.storage.id) {
-        storageProvider = new classes[i](config.provider.storage)
-      }
-    }
-  }
-  return storageProvider
-}
+process.on('SIGTERM', () => shutdownManager.shutdown())
+process.on('SIGINT', () => shutdownManager.shutdown())
