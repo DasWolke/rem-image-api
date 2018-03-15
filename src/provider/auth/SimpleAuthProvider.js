@@ -1,7 +1,7 @@
 'use strict';
 
-const BaseMiddleware = require('wapi-core').BaseMiddleware;
-const HTTPCodes = require('wapi-core').Constants.HTTPCodes;
+const BaseMiddleware = require('@weeb_services/wapi-core').BaseMiddleware
+const HTTPCodes = require('@weeb_services/wapi-core').Constants.HTTPCodes
 
 /**
  * Simple Authentication Provider

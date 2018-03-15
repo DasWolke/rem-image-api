@@ -8,8 +8,8 @@ let upload = multer({storage: storage});
 const winston = require('winston');
 const ImageModel = require('../DB/image.mongo');
 const axios = require('axios');
-const BaseRouter = require('wapi-core').BaseRouter;
-const HTTPCodes = require('wapi-core').Constants.HTTPCodes;
+const BaseRouter = require('@weeb_services/wapi-core').BaseRouter
+const HTTPCodes = require('@weeb_services/wapi-core').Constants.HTTPCodes
 const pkg = require('../../package.json');
 
 class ImageRouter extends BaseRouter {
