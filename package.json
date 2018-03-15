@@ -1,6 +1,6 @@
 {
   "name": "toph",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Image api with lots of awesome integrations",
   "main": "src/index.js",
   "dependencies": {
