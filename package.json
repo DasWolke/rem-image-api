@@ -4,6 +4,7 @@
   "description": "Image api with lots of awesome integrations",
   "main": "src/index.js",
   "dependencies": {
+    "@weeb_services/wapi-core": "^1.4.1-alpha8",
     "aws-sdk": "^2.62.0",
     "axios": "^0.16.2",
     "body-parser": "^1.17.2",
@@ -14,7 +15,6 @@
     "shortid": "^2.2.8",
     "tsubaki": "^1.2.0",
     "universal-analytics": "^0.4.16",
-    "wapi-core": "git+https://github.com/weeb-services/wapi-core.git",
     "winston": "^2.3.1"
   },
   "devDependencies": {},
