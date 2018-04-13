@@ -4,6 +4,11 @@
   "dburl": "mongodb://localhost/image-api",
   "env": "development",
   "track":"",
+  "registration":{
+    "enabled":false,
+    "host":"",
+    "token":""
+  },
   "provider": {
     "auth": {
       "use": true,

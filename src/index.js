@@ -7,13 +7,13 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 mongoose.Promise = Promise;
 
-const GenericRouter = require('wapi-core').GenericRouter;
-const WildcardRouter = require('wapi-core').WildcardRouter;
+const GenericRouter = require('@weeb_services/wapi-core').GenericRouter;
+const WildcardRouter = require('@weeb_services/wapi-core').WildcardRouter;
 const ImageRouter = require('./routers/image.router');
 
-const PermMiddleware = require('wapi-core').PermMiddleware;
-const AuthMiddleware = require('wapi-core').AccountAPIMiddleware;
-const TrackMiddleware = require('./middleware/track.middleware');
+const PermMiddleware = require('@weeb_services/wapi-core').PermMiddleware;
+const AuthMiddleware = require('@weeb_services/wapi-core').AccountAPIMiddleware;
+const TrackMiddleware = require('@weeb_services/wapi-core').TrackingMiddleware;
 
 const {promisifyAll} = require('tsubaki');
 const fs = promisifyAll(require('fs'));
@@ -21,23 +21,25 @@ const path = require('path');
 
 const permNodes = require('./permNodes');
 
+const Registrator = require('@weeb_services/wapi-core').Registrator;
+const ShutdownHandler = require('@weeb_services/wapi-core').ShutdownHandler;
+
+const pkg = require('../package.json');
+const config = require('../config/main');
+let registrator;
+
+if (config.registration && config.registration.enabled) {
+    registrator = new Registrator(config.registration.host, config.registration.token);
+}
+
 winston.remove(winston.transports.Console);
 winston.add(winston.transports.Console, {
     timestamp: true,
     colorize: true,
 });
+let shutdownManager;
 
 let init = async () => {
-    let config, pkg;
-    try {
-        config = require('../config/main.json');
-        pkg = require('../package.json');
-    } catch (e) {
-        winston.error(e);
-        winston.error('Failed to require config.');
-        return process.exit(1);
-    }
-    winston.info('Config loaded.');
 
     if (!config.provider.storage) {
         winston.error('No Storage Provider configured');
@@ -71,7 +73,7 @@ let init = async () => {
     if (config.provider.auth && config.provider.auth.use) {
         if (config.provider.auth.id !== 'account_api') {
             try {
-                authProvider = await loadAuthProvider(config);
+                authProvider = await loadAuthProvider();
             } catch (e) {
                 winston.error(e);
                 winston.error('Unable to load a suitable auth provider');
@@ -95,7 +97,7 @@ let init = async () => {
     // load a storage provider, used for storing and loading dev-images
     let storageProvider;
     try {
-        storageProvider = await loadStorageProvider(config);
+        storageProvider = await loadStorageProvider();
     } catch (e) {
         winston.error(e);
         winston.error('Unable to load a suitable storage provider');
@@ -119,7 +121,7 @@ let init = async () => {
 
     app.use(new PermMiddleware(pkg.name, config.env).middleware());
     if (config.track) {
-        app.use(new TrackMiddleware().middleware());
+        app.use(new TrackMiddleware(pkg.name, pkg.version, config.env, config.track).middleware());
     }
 
     // Routers
@@ -131,7 +133,11 @@ let init = async () => {
     // Always use this last
     app.use(new WildcardRouter().router());
 
-    app.listen(config.port, config.host);
+    const server = app.listen(config.port, config.host);
+    shutdownManager = new ShutdownHandler(server, registrator, mongoose, pkg.serviceName);
+    if (registrator) {
+        await registrator.register(pkg.serviceName, [config.env], config.port);
+    }
     winston.info(`Server started on ${config.host}:${config.port}`);
 };
 init()
@@ -141,7 +147,10 @@ init()
         process.exit(1);
     });
 
-async function loadAuthProvider(config) {
+process.on('SIGTERM', () => shutdownManager.shutdown());
+process.on('SIGINT', () => shutdownManager.shutdown());
+
+async function loadAuthProvider () {
     let dir = await fs.readdirAsync(path.join(__dirname, '/provider/auth'));
     let authProvider;
     if (dir.length > 0) {
@@ -161,7 +170,7 @@ async function loadAuthProvider(config) {
     return authProvider;
 }
 
-async function loadStorageProvider(config) {
+async function loadStorageProvider () {
     let dir = await fs.readdirAsync(path.join(__dirname, '/provider/storage'));
     let storageProvider;
     if (dir.length > 0) {
