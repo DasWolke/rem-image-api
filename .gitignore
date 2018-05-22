@@ -5,3 +5,5 @@ config/main.json
 package-lock.json
 dev-images/
 toph.iml
+config/custom.json
+config/old-main.json

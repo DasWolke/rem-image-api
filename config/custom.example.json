@@ -1,0 +1,8 @@
+{
+  "awsS3Bucket": "",
+  "awsAccessKeyId": "",
+  "awsSecretAccessKey": "",
+  "awsRegion": "",
+  "cdnurl": "",
+  "storagepath": ""
+}
