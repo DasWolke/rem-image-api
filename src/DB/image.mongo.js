@@ -11,6 +11,7 @@ let imageSchema = mongoose.Schema({
     nsfw: {type: Boolean, default: false},
     account: String,
     hidden: {type: Boolean, default: false},
+    campaignId: String,
 });
 let imageModel = mongoose.model('Images', imageSchema);
 module.exports = imageModel;

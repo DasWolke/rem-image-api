@@ -4,12 +4,13 @@
 const Url = require('url');
 let multer = require('multer');
 let storage = multer.memoryStorage();
-let upload = multer({storage: storage});
+let upload = multer({ storage: storage });
 const winston = require('winston');
 const ImageModel = require('../DB/image.mongo');
+const CampaignModel = require('../DB/campaign.mongo');
 const axios = require('axios');
-const BaseRouter = require('@weeb_services/wapi-core').BaseRouter
-const HTTPCodes = require('@weeb_services/wapi-core').Constants.HTTPCodes
+const BaseRouter = require('@weeb_services/wapi-core').BaseRouter;
+const HTTPCodes = require('@weeb_services/wapi-core').Constants.HTTPCodes;
 const pkg = require('../../package.json');
 
 class ImageRouter extends BaseRouter {
@@ -36,17 +37,36 @@ class ImageRouter extends BaseRouter {
                                 });
                         }
                     }
+                    if (req.body.campaignId && req.body.campaingId !== '') {
+                        if (req.account && !req.account.perms.all && !req.account.perms.upload_campaign) {
+                            return res.status(HTTPCodes.FORBIDDEN)
+                                .json({
+                                    status: HTTPCodes.FORBIDDEN,
+                                    message: `missing scope ${pkg.name}-${req.config.env}:upload_campaign`,
+                                });
+                        } else {
+                            let campaign = await CampaignModel.findOne({ id: req.body.campaignId });
+                            if (!campaign) {
+                                return res.status(HTTPCodes.NOT_FOUND)
+                                    .json({
+                                        status: HTTPCodes.NOT_FOUND,
+                                        message: `There is no campaign created with the id ${req.body.campaignId}`,
+                                    });
+                            }
+                        }
+                    }
                     // stop the request if no actual file/data is present
                     if (!req.body.url && !req.file) {
                         return res.status(400)
-                            .json({status: 400, message: 'You have to either pass a file or a url'});
+                            .json({ status: 400, message: 'You have to either pass a file or a url' });
                     }
                     req.body.baseType = req.body.baseType ? req.body.baseType : req.body.basetype;
                     if (!req.body.baseType) {
                         return res.status(400)
-                            .json({status: 400, message: 'You have to pass the basetype of the file'});
+                            .json({ status: 400, message: 'You have to pass the basetype of the file' });
                     }
                     let uploadedFile;
+                    let name_append = `-${req.body.campaignId}` ? req.body.campaignId : '';
                     if (req.file) {
                         // only allow certain image files
                         try {
@@ -59,7 +79,7 @@ class ImageRouter extends BaseRouter {
                                 });
                         }
                         // upload the file
-                        uploadedFile = await req.storageProvider.upload(req.file.buffer, req.file.mimetype);
+                        uploadedFile = await req.storageProvider.upload(req.file.buffer, req.file.mimetype, name_append);
                     } else if (req.body.url) {
                         try {
                             // make a head request to the provided url
@@ -76,7 +96,7 @@ class ImageRouter extends BaseRouter {
                                     });
                             }
                             let request = await axios.get(url.href, {responseType: 'arraybuffer'});
-                            uploadedFile = await req.storageProvider.upload(request.data, request.headers['content-type']);
+                            uploadedFile = await req.storageProvider.upload(request.data, request.headers['content-type'], name_append);
                         } catch (e) {
                             winston.error(e);
                             return res.status(400)
@@ -114,6 +134,7 @@ class ImageRouter extends BaseRouter {
                         nsfw,
                         hidden,
                         account: req.account.id,
+                        campaignId: req.body.campaignId,
                     });
                     await image.save();
                     // build a full path with url
@@ -723,7 +744,7 @@ class ImageRouter extends BaseRouter {
      * @param {Object} req the actual request
      * @param {Object} config the loaded config
      * @param {Object} image Image object
-     * @return {string} imagePath Path to the image
+     * @returns {string} imagePath Path to the image
      */
     buildImagePath(req, config, image) {
         let imagePath;
