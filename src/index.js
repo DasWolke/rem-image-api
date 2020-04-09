@@ -10,6 +10,7 @@ mongoose.Promise = Promise;
 const GenericRouter = require('@weeb_services/wapi-core').GenericRouter;
 const WildcardRouter = require('@weeb_services/wapi-core').WildcardRouter;
 const ImageRouter = require('./routers/image.router');
+const CampaignRouter = require('./routers/campaign.router');
 
 const PermMiddleware = require('@weeb_services/wapi-core').PermMiddleware;
 const AuthMiddleware = require('@weeb_services/wapi-core').AccountAPIMiddleware;
@@ -130,6 +131,7 @@ let init = async () => {
         `${pkg.name}-${config.env}`,
         permNodes).router());
     app.use(new ImageRouter().router());
+    app.use(new CampaignRouter().router());
     // Always use this last
     app.use(new WildcardRouter().router());
 
