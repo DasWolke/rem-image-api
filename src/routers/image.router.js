@@ -153,6 +153,7 @@ class ImageRouter extends BaseRouter {
                                 hidden,
                                 nsfw,
                                 account: req.account.id,
+                                campaignId: req.body.campaignId,
                             },
                             message: 'Upload succeeded',
                         });

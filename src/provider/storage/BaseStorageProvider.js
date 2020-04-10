@@ -14,17 +14,20 @@ class BaseStorageProvider {
      * throws error otherwise
      * @param options
      */
+    // eslint-disable-next-line no-unused-vars
     checkOptions(options) {
         throw new Error `checkOptions() is not implemented by ${this.constructor.name}`;
     }
 
     /**
      * Checks if a file with this id exists in the storage provided
-     * @param {String} filename Filename of the file
-     * @return {Promise}
+     * @param {string} url url of the file to fetch
+     * @param {string} filename Filename of the file
+     * @returns {Promise}
      */
-    async getFile(filename) {
-        throw new Error `getFile() is not implemented by ${this.constructor.name}`;
+    // eslint-disable-next-line no-unused-vars
+    async getFile(url, filename) {
+        throw new Error`getFile() is not implemented by ${this.constructor.name}`;
     }
 
     /**
@@ -32,8 +35,9 @@ class BaseStorageProvider {
      * developer
      * @param {Blob} file File to upload
      * @param {String} mime Mimetype of the file to upload
-     * @return {Promise}
+     * @returns {Promise}
      */
+    // eslint-disable-next-line no-unused-vars
     async upload(file, mime) {
         throw new Error `upload() is not implemented by ${this.constructor.name}`;
     }
@@ -43,8 +47,9 @@ class BaseStorageProvider {
      * @param {Object} file File object
      * @param {String} file.id Id of the file
      * @param {String} file.fileType Filetype of the file
-     * @return {Promise}
+     * @returns {Promise}
      */
+    // eslint-disable-next-line no-unused-vars
     async removeFile(file) {
         throw new Error `removeFile() is not implemented by ${this.constructor.name}`;
     }
