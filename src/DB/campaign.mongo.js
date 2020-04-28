@@ -7,6 +7,7 @@ let campaignSchema = mongoose.Schema({
     account: String,
     probability: Number,
     message: String,
+    active: Boolean,
 });
 let campaignModel = mongoose.model('Campaigns', campaignSchema);
 module.exports = campaignModel;

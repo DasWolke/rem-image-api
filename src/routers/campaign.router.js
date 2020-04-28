@@ -58,6 +58,7 @@ class CampaignRouter extends BaseRouter {
                 account: req.account.id,
                 probability: req.body.probability,
                 message: req.body.message,
+                active: req.body.active ? req.body.active : false,
             });
             await campaign.save();
             return {
@@ -67,6 +68,7 @@ class CampaignRouter extends BaseRouter {
                     account: req.account.id,
                     probability: req.body.probability,
                     message: req.body.message,
+                    active: req.body.active ? req.body.active : false,
                 },
             };
         });

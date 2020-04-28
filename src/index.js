@@ -122,7 +122,12 @@ let init = async () => {
 
     app.use(new PermMiddleware(pkg.name, config.env).middleware());
     if (config.track) {
-        app.use(new TrackMiddleware(pkg.name, pkg.version, config.env, config.track).middleware());
+        const track = new TrackMiddleware(pkg.name, pkg.version, config.env, config.track);
+        app.use(track.middleware());
+        app.use((req, res, next) => {
+            req.track = track;
+            next();
+        });
     }
 
     // Routers
