@@ -48,7 +48,7 @@ let init = async () => {
     }
 
     try {
-        await mongoose.connect(config.dburl, { useNewUrlParser: true, useUnifiedTopology: true });
+        await mongoose.connect(config.dburl, {});
     } catch (e) {
         winston.error('Unable to connect to Mongo Server.');
         return process.exit(1);
