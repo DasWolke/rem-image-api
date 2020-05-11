@@ -153,6 +153,7 @@ class ImageRouter extends BaseRouter {
                                 hidden,
                                 nsfw,
                                 account: req.account.id,
+                                campaignId: req.body.campaignId,
                             },
                             message: 'Upload succeeded',
                         });
@@ -363,17 +364,36 @@ class ImageRouter extends BaseRouter {
                             break;
                     }
                 }
+                let campaign;
+                let campaigns = await CampaignModel.find({ $query: { active: true }, $orderby: { probability: 1 } })
+                    .lean()
+                    .exec();
+                for (let i = 0; i < campaigns.length; i++) {
+                    if (this.checkCampaignTrigger(campaigns[i].probability)) {
+                        campaign = campaigns[i];
+                        break;
+                    }
+                }
+                if (campaign) {
+                    query.campaignId = campaign.id;
+                }
                 let images = await ImageModel.find(query)
                     .distinct('id');
+                if (images.length === 0 && campaign) {
+                    delete query.campaignId;
+                    campaign = undefined;
+                    images = await ImageModel.find(query)
+                        .distinct('id');
+                }
                 if (images.length === 0) {
-                    return {status: 404, message: 'No image found for your query'};
+                    return { status: 404, message: 'No image found for your query' };
                 }
                 let id = images[Math.floor(Math.random() * images.length)];
-                let image = await ImageModel.findOne({id})
+                let image = await ImageModel.findOne({ id })
                     .lean()
                     .exec();
                 if (!image) {
-                    return {status: 404, message: 'No image found for your query'};
+                    return { status: 404, message: 'No image found for your query' };
                 }
                 if (image.tags && image.tags.length > 0) {
                     image.tags = this.filterHiddenTags(image, req.account);
@@ -381,6 +401,13 @@ class ImageRouter extends BaseRouter {
                 // build the full url to the image
                 let imagePath = this.buildImagePath(req, req.config.provider.storage, image);
                 // return the image
+                if (campaign) {
+                    delete campaign._id;
+                    delete campaign.__v;
+                    if (req.track) {
+                        req.track.exec(req, { cs: campaign.source, ci: campaign.id });
+                    }
+                }
                 return {
                     status: 200,
                     id: image.id,
@@ -393,6 +420,7 @@ class ImageRouter extends BaseRouter {
                     hidden: image.hidden,
                     tags: image.tags,
                     url: imagePath,
+                    campaign,
                 };
             } catch (e) {
                 winston.error(e);
@@ -736,6 +764,11 @@ class ImageRouter extends BaseRouter {
             default:
                 throw new Error(`Filetype ${type} is not supported`);
         }
+    }
+
+    checkCampaignTrigger(probability) {
+        let res = Math.floor(Math.random() * 100);
+        return res <= probability;
     }
 
     // eslint-disable-next-line valid-jsdoc

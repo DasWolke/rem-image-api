@@ -20,7 +20,7 @@ class AwsS3StorageProvider extends BaseStorageProvider {
             secretAccessKey: options.awsSecretAccessKey,
             region: options.awsRegion,
         });
-        this.s3 = new AWS.S3();
+        this.s3 = new AWS.S3({ endpoint: options.awsEndpoint });
     }
 
     static getId() {
@@ -31,7 +31,7 @@ class AwsS3StorageProvider extends BaseStorageProvider {
     /**
      * Function that checks if all needed option keys are set,
      * throws error otherwise
-     * @param options
+     * @param {Object} options
      */
     checkOptions(options) {
         if (!options.awsS3Bucket) {
@@ -66,17 +66,20 @@ class AwsS3StorageProvider extends BaseStorageProvider {
      * Uploads file to the specified provider, has to be overwritten by the
      * developer
      * @param {Blob} file File to upload
-     * @param {String} mime Mimetype of the file
-     * @return {Promise}
+     * @param {string} mime Mimetype of the file
+     * @param {string} name_append Append a string to the name of the file
+     * @returns {Promise}
      */
-    upload(file, mime) {
+    upload(file, mime, name_append) {
         return new Promise((res, rej) => {
             let name = shortid();
+            name += name_append;
             let type = mime.split('/')
                 .slice(1)[0];
+            let fqn = `${name}${name_append}.${type}`;
             this.s3.putObject({
                 Bucket: this.options.awsS3Bucket,
-                Key: `${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}${name}.${type}`,
+                Key: `${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}${fqn}`,
                 Body: file,
                 ContentType: mime,
             }, (err) => {
@@ -86,7 +89,8 @@ class AwsS3StorageProvider extends BaseStorageProvider {
                 return res({
                     name,
                     type,
-                    filepath: `${this.options.cdnurl.endsWith('/') ? this.options.cdnurl : `${this.options.cdnurl}/`}${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}${name}.${type}`,
+                    fqn,
+                    filepath: `${this.options.cdnurl.endsWith('/') ? this.options.cdnurl : `${this.options.cdnurl}/`}${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}${fqn}`,
                 });
             });
         });
@@ -96,9 +100,9 @@ class AwsS3StorageProvider extends BaseStorageProvider {
     /**
      * Removes a file at the given path
      * @param {Object} file File object
-     * @param {String} file.id Id of the file
-     * @param {String} file.fileType Filetype of the file
-     * @return {Promise}
+     * @param {string} file.id Id of the file
+     * @param {string} file.fileType Filetype of the file
+     * @returns {Promise}
      */
     removeFile(file) {
         return new Promise((res, rej) => {
