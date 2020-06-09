@@ -12,12 +12,15 @@ const axios = require('axios');
 const BaseRouter = require('@weeb_services/wapi-core').BaseRouter;
 const HTTPCodes = require('@weeb_services/wapi-core').Constants.HTTPCodes;
 const pkg = require('../../package.json');
+const RedirectController = require('../controller/redirect.controller');
+const redirectController = new RedirectController();
 
 class ImageRouter extends BaseRouter {
     constructor() {
         super();
         this.router()
             .post('/upload', upload.single('file'), async (req, res) => {
+                let campaign;
                 try {
                     if (req.account && !req.account.perms.all && !req.account.perms.upload_image && !req.account.perms.upload_image_private) {
                         return res.status(HTTPCodes.FORBIDDEN)
@@ -45,7 +48,7 @@ class ImageRouter extends BaseRouter {
                                     message: `missing scope ${pkg.name}-${req.config.env}:upload_campaign`,
                                 });
                         } else {
-                            let campaign = await CampaignModel.findOne({ id: req.body.campaignId });
+                            campaign = await CampaignModel.findOne({ id: req.body.campaignId });
                             if (!campaign) {
                                 return res.status(HTTPCodes.NOT_FOUND)
                                     .json({
@@ -66,7 +69,7 @@ class ImageRouter extends BaseRouter {
                             .json({ status: 400, message: 'You have to pass the basetype of the file' });
                     }
                     let uploadedFile;
-                    let name_append = `-${req.body.campaignId}` ? req.body.campaignId : '';
+                    let name_append = req.body.campaignId ? `-${req.body.campaignId}-x` : '';
                     if (req.file) {
                         // only allow certain image files
                         try {
@@ -137,8 +140,11 @@ class ImageRouter extends BaseRouter {
                         campaignId: req.body.campaignId,
                     });
                     await image.save();
+                    if (campaign) {
+                        await redirectController.createRedirect(image, campaign, req.storageProvider);
+                    }
                     // build a full path with url
-                    let imagePath = this.buildImagePath(req, req.config.provider.storage, image);
+                    let imagePath = this.buildImagePath(req, req.config.provider.storage, image, campaign);
                     // send the success request to the client
                     return res.status(HTTPCodes.OK)
                         .json({
@@ -399,7 +405,7 @@ class ImageRouter extends BaseRouter {
                     image.tags = this.filterHiddenTags(image, req.account);
                 }
                 // build the full url to the image
-                let imagePath = this.buildImagePath(req, req.config.provider.storage, image);
+                let imagePath = this.buildImagePath(req, req.config.provider.storage, image, campaign);
                 // return the image
                 if (campaign) {
                     delete campaign._id;
@@ -554,7 +560,7 @@ class ImageRouter extends BaseRouter {
                 }
                 let image = await ImageModel.findOne({id: req.params.id});
                 if (!image) {
-                    return {status: 404, message: 'No image found for your query'};
+                    return { status: 404, message: 'No image found for your query' };
                 }
                 if (!image.hidden || (image.hidden && image.account !== req.account.id)) {
                     if (!req.account.perms.all && !req.account.perms.image_delete) {
@@ -564,9 +570,10 @@ class ImageRouter extends BaseRouter {
                         };
                     }
                 }
-                await req.storageProvider.removeFile(image);
-                await ImageModel.remove({id: image.id});
-                return {status: 200, message: `Image successfully removed`, image: image};
+                let name_append = image.campaignId ? `-${image.campaignId}-x` : '';
+                await req.storageProvider.removeFile(image, name_append);
+                await ImageModel.remove({ id: image.id });
+                return { status: 200, message: `Image successfully removed`, image: image };
             } catch (e) {
                 winston.error(e);
                 return {status: 500, message: 'Internal error'};
@@ -777,17 +784,19 @@ class ImageRouter extends BaseRouter {
      * @param {Object} req the actual request
      * @param {Object} config the loaded config
      * @param {Object} image Image object
+     * @param {Object} campaign Campaign object
      * @returns {string} imagePath Path to the image
      */
-    buildImagePath(req, config, image) {
+    buildImagePath(req, config, image, campaign) {
+        let append = campaign ? `-${campaign.id}-x` : '';
         let imagePath;
         if (config.cdnurl && (!config.local || !config.local.serveFiles)) {
-            imagePath = `${config.cdnurl}${config.cdnurl.endsWith('/') ? '' : '/'}${config.storagepath !== '' ? config.storagepath.endsWith('/') ? config.storagepath : `${config.storagepath}/` : ''}${image.id}.${image.fileType}`;
+            imagePath = `${config.cdnurl}${config.cdnurl.endsWith('/') ? '' : '/'}${config.storagepath !== '' ? config.storagepath.endsWith('/') ? config.storagepath : `${config.storagepath}/` : ''}${image.id + append}.${image.fileType}`;
             return imagePath;
         }
         let fullUrl = `${req.protocol}://${req.get('host')}`;
         if (config.local && config.local.serveFiles) {
-            imagePath = `${fullUrl}${config.local.servePath}${config.local.servePath.endsWith('/') ? '' : '/'}${image.id}.${image.fileType}`;
+            imagePath = `${fullUrl}${config.local.servePath}${config.local.servePath.endsWith('/') ? '' : '/'}${image.id + append}.${image.fileType}`;
         }
         return imagePath;
     }
