@@ -73,13 +73,12 @@ class AwsS3StorageProvider extends BaseStorageProvider {
     upload(file, mime, name_append) {
         return new Promise((res, rej) => {
             let name = shortid();
-            name += name_append;
             let type = mime.split('/')
                 .slice(1)[0];
             let fqn = `${name}${name_append}.${type}`;
             this.s3.putObject({
                 Bucket: this.options.awsS3Bucket,
-                Key: `${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}${fqn}`,
+                Key: `${this._checkStoragePath()}${fqn}`,
                 Body: file,
                 ContentType: mime,
             }, (err) => {
@@ -90,7 +89,7 @@ class AwsS3StorageProvider extends BaseStorageProvider {
                     name,
                     type,
                     fqn,
-                    filepath: `${this.options.cdnurl.endsWith('/') ? this.options.cdnurl : `${this.options.cdnurl}/`}${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}${fqn}`,
+                    filepath: `${this._checkCDNUrl()}${this._checkStoragePath()}${fqn}`,
                 });
             });
         });
@@ -102,15 +101,17 @@ class AwsS3StorageProvider extends BaseStorageProvider {
      * @param {Object} file File object
      * @param {string} file.id Id of the file
      * @param {string} file.fileType Filetype of the file
+     * @param {string} name_append text to append to file name
      * @returns {Promise}
      */
-    removeFile(file) {
+    removeFile(file, name_append) {
         return new Promise((res, rej) => {
-            this.getFile(`${file.id}.${file.fileType}`)
+            let fqn = `${file.id}${name_append}-x.${file.fileType}`;
+            this.getFile(fqn)
                 .then(() => {
                     this.s3.deleteObject({
                         Bucket: this.options.awsS3Bucket,
-                        Key: `${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}${file.id}.${file.fileType}`,
+                        Key: `${this._checkStoragePath()}${fqn}`,
                     }, (err) => {
                         if (err) {
                             return rej(err);
@@ -120,6 +121,22 @@ class AwsS3StorageProvider extends BaseStorageProvider {
                 })
                 .catch(res);
         });
+    }
+
+    _getOptions() {
+        return this.options;
+    }
+
+    _getS3() {
+        return this.s3;
+    }
+
+    _checkStoragePath() {
+        return `${this.options.storagepath !== '' ? this.options.storagepath.endsWith('/') ? this.options.storagepath : `${this.options.storagepath}/` : ''}`;
+    }
+
+    _checkCDNUrl() {
+        return this.options.cdnurl.endsWith('/') ? this.options.cdnurl : `${this.options.cdnurl}/`;
     }
 }
 
