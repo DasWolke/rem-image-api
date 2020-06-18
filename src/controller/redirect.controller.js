@@ -28,7 +28,7 @@ class RedirectController {
 
     _generateRule(image, campaign, storageOptions) {
         return {
-            original: `/${storageOptions.storagepath}/${image.id}-${campaign.id}.${image.fileType}`,
+            original: `/${storageOptions.storagepath}/${image.id}-${campaign.id}-x.${image.fileType}`,
             redirect: campaign.source,
             statusCode: 302,
             startTime: '',
